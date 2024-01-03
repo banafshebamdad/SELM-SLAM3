@@ -1,0 +1,90 @@
+%YAML:1.0
+
+#--------------------------------------------------------------------------------------------
+# Camera Parameters. Adjust them!
+#--------------------------------------------------------------------------------------------
+File.version: "1.0"
+
+Camera.type: "PinHole"
+
+# Camera calibration and distortion parameters (OpenCV) 
+Camera1.fx: 517.306408
+Camera1.fy: 516.469215
+Camera1.cx: 318.643040
+Camera1.cy: 255.313989
+
+Camera1.k1: 0.262383
+Camera1.k2: -0.953104
+Camera1.p1: -0.005358
+Camera1.p2: 0.002628
+Camera1.k3: 1.163314
+
+# B.B The following info from https://cvg.cit.tum.de/data/datasets/rgbd-dataset/file_formats
+# B.B The color images are stored as 640x480 8-bit RGB images in PNG format. 
+Camera.width: 640
+Camera.height: 480
+
+# Camera frames per second 
+Camera.fps: 30
+
+# Color order of the images (0: BGR, 1: RGB. It is ignored if images are grayscale)
+Camera.RGB: 1
+
+# Close/Far threshold. Baseline times.
+Stereo.ThDepth: 40.0
+Stereo.b: 0.07732
+
+# B.B the following info. derived from https://cvg.cit.tum.de/data/datasets/rgbd-dataset/file_formats
+# B.B The depth images are scaled by a factor of 5000, i.e., a pixel value of 5000 in the depth image corresponds to a distance of 1 meter from the camera, 10000 to 2 meter distance, etc. A pixel value of 0 means missing value/no data.
+# B.B The depth maps are stored as 640x480 16-bit monochrome images in PNG format.
+# B.B The color and depth images are already pre-registered using the OpenNI driver from PrimeSense, i.e., the pixels in the color and depth images correspond already 1:1.
+
+# Depth map values factor
+RGBD.DepthMapFactor: 5000.0 # 1.0 for ROS_bag
+
+#--------------------------------------------------------------------------------------------
+# ORB Parameters
+#--------------------------------------------------------------------------------------------
+
+# ORB Extractor: Number of features per image
+ORBextractor.nFeatures: 1200 # 2048 # B.B 1000
+
+# ORB Extractor: Scale factor between levels in the scale pyramid 	
+ORBextractor.scaleFactor: 1.0 # B.B 1.2
+
+# ORB Extractor: Number of levels in the scale pyramid	
+ORBextractor.nLevels: 1 # B.B 8
+# B.B Since I want to remove the following information, I initialized the following in the Frame constructor with constant values.
+#   std::vector<float> myVector(1, 1.0f);
+#   mnScaleLevels = 1;
+#   mfScaleFactor = 1.0;
+#   mfLogScaleFactor = 0.0;
+#   mvScaleFactors = myVector;
+#   mvInvScaleFactors = myVector;
+#   mvLevelSigma2 = myVector;
+#   mvInvLevelSigma2 = myVector;
+
+# ORB Extractor: Fast threshold
+# Image is divided in a grid. At each cell FAST are extracted imposing a minimum response.
+# Firstly we impose iniThFAST. If no corners are detected we impose a lower value minThFAST 
+# You can lower these values if your images have low contrast			
+
+# B.B These values should be of type 'float' because they are used in SPDetector::getKeyPoints, and in this code, the values are expected to be floating-point numbers.
+# B.B Since these values are utilized to threshold the probability map, which is the output of the Superpoint model, I have adjusted them to 0.1. The values within the probability map fall within the range of [0, 1].
+ORBextractor.iniThFAST: 0.035 # 20.0 # .0 is added by banafshe to resolve ORBextractor.iniThFAST parameter must be a real number, aborting... error
+ORBextractor.minThFAST: 0.025 # 7.0 # .0 is added by Banafshe to resolve the error similar the abovementioned error
+
+#--------------------------------------------------------------------------------------------
+# Viewer Parameters
+#--------------------------------------------------------------------------------------------
+Viewer.KeyFrameSize: 0.05
+Viewer.KeyFrameLineWidth: 1.0
+Viewer.GraphLineWidth: 0.9
+Viewer.PointSize: 2.0
+Viewer.CameraSize: 0.08
+Viewer.CameraLineWidth: 3.0
+Viewer.ViewpointX: 0.0
+Viewer.ViewpointY: -0.7
+Viewer.ViewpointZ: -1.8
+Viewer.ViewpointF: 500.0
+

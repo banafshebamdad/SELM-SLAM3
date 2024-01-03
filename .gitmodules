@@ -1,0 +1,4 @@
+[submodule "Thirdparty/Pangolin"]
+	path = Thirdparty/Pangolin
+	url = https://github.com/stevenlovegrove/Pangolin.git
+

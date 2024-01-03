@@ -1,0 +1,9 @@
+To calculate pMP->mTrackProjX and MP->mTrackProjY, the following steps are performed (see Frame::isInFrustum):
+	0) Eigen::Matrix<float,3,1> P = pMP->GetWorldPos();
+	1) Convert the world coordinates of the map point (P) to camera coordinates (Pc) using the camera pose 
+		const Eigen::Matrix<float,3,1> Pc = mRcw * P + mtcw;
+	2) Project the camera coordinates (Pc) onto the image plane using the intrinsic parameters of the camera 
+		const Eigen::Vector2f uv = mpCamera->project(Pc);
+	3) Set values
+		pMP->mTrackProjX = uv(0);
+		pMP->mTrackProjY = uv(1);
