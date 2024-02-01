@@ -53,102 +53,8 @@ namespace SELMSLAM {
      * @todo Mo Okt. 16, 2023 13:28
      * I assume the input image is in grayscale. Convert it first to grayscale if it's not.
     */
-//    void BBSuperPoint::featureExtractor(cv::InputArray image, cv::InputArray mask, std::vector<cv::KeyPoint>& keypoints, cv::OutputArray& descriptors) {
 
-//         // 
-//         // CUDA Provider initialization
-//         // 
-//         const auto& api = Ort::GetApi();
-
-//         OrtCUDAProviderOptionsV2* cuda_options = nullptr;
-//         api.CreateCUDAProviderOptions(&cuda_options);
-//         std::vector<const char*> keys{"device_id"};
-//         std::vector<const char*> values{"0"};
-
-//         api.UpdateCUDAProviderOptions(cuda_options, keys.data(), values.data(), keys.size());
-
-//         Ort::Env env(ORT_LOGGING_LEVEL_WARNING, "BBSuperPoint");
-
-//         Ort::SessionOptions sessionOptions;
-
-//         api.SessionOptionsAppendExecutionProvider_CUDA_V2(sessionOptions, cuda_options);
-
-//         static Ort::Session session(env, this->m_modelPath.c_str(), sessionOptions);
-
-//         Ort::MemoryInfo memoryInfo("Cuda", OrtAllocatorType::OrtDeviceAllocator, 0, OrtMemTypeDefault);
-//         Ort::Allocator cuda_allocator(session, memoryInfo);
-
-//         // 
-//         // Input-binding
-//         // 
-//         Ort::IoBinding io_binding(session);
-
-//         const char* input_names[] = { "image" };
-//         const char* output_names[] = { "keypoints", "scores", "descriptors" };
-
-//         // pre-processing
-//         cv::Mat img = image.getMat();
-//         cv::Mat grayImg = img; // @todo
-//         float mean, std;
-//         vector<float> imgData = preprocessImage(grayImg, mean, std);
-
-//         // single data point (sample), single channel (depth)
-//         vector<int64_t> inputShape{ 1, 1, grayImg.rows, grayImg.cols };
-
-//         auto input_data = std::unique_ptr<void, CudaMemoryDeleter>(cuda_allocator.Alloc(imgData.size() * sizeof(float)), CudaMemoryDeleter(&cuda_allocator));
-//         cudaMemcpy(input_data.get(), imgData.data(), sizeof(float) * imgData.size(), cudaMemcpyHostToDevice);
-//         Ort::Value bound_x = Ort::Value::CreateTensor(memoryInfo, reinterpret_cast<float*>(input_data.get()), imgData.size(), inputShape.data(), inputShape.size());
-//         io_binding.BindInput("image", bound_x);
-
-//         // 
-//         // output binding
-//         // 
-//         Ort::MemoryInfo output_mem_info{"Cuda", OrtDeviceAllocator, 0, OrtMemTypeDefault};
-
-//         io_binding.BindOutput(output_names[0], output_mem_info);
-//         io_binding.BindOutput(output_names[1], output_mem_info);
-//         io_binding.BindOutput(output_names[2], output_mem_info);
-
-//         TIC
-//         session.Run(Ort::RunOptions(), io_binding);
-//         TOC
-
-//         vector<Ort::Value> outputs = io_binding.GetOutputValues();
-
-//         // Allocate host memory for the output tensors
-//         std::vector<int64_t> kpshape  = outputs[0].GetTensorTypeAndShapeInfo().GetShape();
-//         std::vector<int64_t> desshape = outputs[2].GetTensorTypeAndShapeInfo().GetShape();
-
-//         std::vector<int64> kp_host(kpshape[0] * kpshape[1]);
-//         int64* kp = (int64*)outputs[0].GetTensorMutableData<void>();
-//         float* des = (float*)outputs[2].GetTensorMutableData<void>();
-
-//         cudaMemcpy(kp_host.data(), kp, sizeof(int64) * kpshape[0] * kpshape[1], cudaMemcpyDeviceToHost);
-
-//         int keypntcounts = kpshape[1];
-//         keypoints.resize(keypntcounts);
-
-//         // keypoints
-//         for (int i = 0; i < keypntcounts; i++) {
-//             cv::KeyPoint p;
-//             int index = i * 2;
-//             p.pt.x = (float)kp[index];
-//             p.pt.y = (float)kp[index + 1];
-//             keypoints[i] = p;
-//         }
-        
-//         // B.B descriptors
-//         cv::Mat desmat = descriptors.getMat();
-//         desmat.create(cv::Size(desshape[2], desshape[1]), CV_32FC1);
-//         for (int h = 0; h < desshape[1]; h++) {
-//             for (int w = 0; w < desshape[2]; w++) {
-//                 int index = h * desshape[2] + w;
-//                 desmat.at<float>(h, w) = des[index];
-//             }
-//         }
-//         desmat.copyTo(descriptors);
-//     }
-
+/*************************************************/
     // Run on CPU
     void BBSuperPoint::featureExtractor(cv::InputArray image, cv::InputArray mask, std::vector<cv::KeyPoint>& keypoints, cv::OutputArray& descriptors) {
 
@@ -280,4 +186,196 @@ namespace SELMSLAM {
         // }
         desmat.copyTo(descriptors);
     }
+/*****************************/
+    // Run on GPU
+/***************************************************
+    void BBSuperPoint::featureExtractor(cv::InputArray image, cv::InputArray mask, std::vector<cv::KeyPoint>& keypoints, cv::OutputArray& descriptors) {
+
+
+        cv::Mat img = image.getMat();
+
+        cv::Mat grayImg = img; // @todo
+
+        float mean, std;
+
+        vector<float> imgData = preprocessImage(grayImg, mean, std);
+
+        // 
+        // CUDA Provider initialization
+        // 
+        // to interaction with the ORT runtime, enabling the execution of ONNX models.
+        const auto& api = Ort::GetApi();
+
+        OrtCUDAProviderOptionsV2* cuda_options = nullptr;
+        api.CreateCUDAProviderOptions(&cuda_options);
+        std::vector<const char*> keys{"device_id"};
+        std::vector<const char*> values{"0"};
+
+        api.UpdateCUDAProviderOptions(cuda_options, keys.data(), values.data(), keys.size());
+
+        // @todo Fr. Dez. 8, 2023 read from setting file
+        int nFeatures = 1200; // 200 500, 750, 900, 1000, 1200
+
+        Ort::Env env(ORT_LOGGING_LEVEL_WARNING, "BBSuperPoint");
+
+        Ort::SessionOptions sessionOptions;
+        api.SessionOptionsAppendExecutionProvider_CUDA_V2(sessionOptions, cuda_options);
+
+        // 
+        // Load the BBSuperPoint network
+        // 
+
+        static Ort::Session session(env, this->m_modelPath.c_str(), sessionOptions);
+        Ort::MemoryInfo memoryInfo("Cuda", OrtAllocatorType::OrtDeviceAllocator, 0, OrtMemTypeDefault);
+        Ort::Allocator cuda_allocator(session, memoryInfo);
+
+        const char* input_names[] = { "image" };
+        const char* output_names[] = { "keypoints", "scores", "descriptors" };
+
+        // single data point (sample), single channel (depth)
+        vector<int64_t> inputShape{ 1, 1, grayImg.rows, grayImg.cols };
+
+        Ort::IoBinding io_binding(session);
+
+        auto input_data = std::unique_ptr<void, CudaMemoryDeleter>(cuda_allocator.Alloc(imgData.size() * sizeof(float)), CudaMemoryDeleter(&cuda_allocator));
+        cudaMemcpy(input_data.get(), imgData.data(), sizeof(float) * imgData.size(), cudaMemcpyHostToDevice);
+
+        // Create an OrtValue tensor backed by data on CUDA memory
+        // reinterpret_cast<float*>: a type-casting operation used to interpret the raw pointer as a pointer to float. CreateTensor function expects a float* pointer.
+        Ort::Value bound_x = Ort::Value::CreateTensor(memoryInfo, reinterpret_cast<float*>(input_data.get()), imgData.size(), inputShape.data(), inputShape.size());
+        io_binding.BindInput("image", bound_x);
+
+        // 
+        // output binding
+        // 
+
+        Ort::MemoryInfo output_mem_info{"Cuda", OrtDeviceAllocator, 0, OrtMemTypeDefault};
+
+
+        io_binding.BindOutput(output_names[0], output_mem_info);
+        io_binding.BindOutput(output_names[1], output_mem_info);
+        io_binding.BindOutput(output_names[2], output_mem_info);
+
+        // Run the model (executing the graph)
+
+        TIC
+        session.Run(Ort::RunOptions(), io_binding);
+        TOC
+
+        vector<Ort::Value> outputs = io_binding.GetOutputValues();
+
+        // Allocate host memory for the output tensors
+        std::vector<int64_t> kpshape = outputs[0].GetTensorTypeAndShapeInfo().GetShape();
+        std::vector<int64_t> scoresshape = outputs[1].GetTensorTypeAndShapeInfo().GetShape();
+        std::vector<int64_t> desshape = outputs[2].GetTensorTypeAndShapeInfo().GetShape();
+
+        int keypntcounts = kpshape[1];
+
+        // To extract only nFeature from the frame, uncomment the following commented code and comment the following line.
+        nFeatures = keypntcounts;
+        // if (keypntcounts < nFeatures) {
+        //     nFeatures = keypntcounts;
+        // }
+
+        // keypoints.resize(keypntcounts);
+        keypoints.resize(nFeatures);
+
+        // Use std::vector instead of dynamic arrays
+        std::vector<int64_t> kp_host(kpshape[0] * kpshape[1]);
+        std::vector<float> scores_host(scoresshape[0] * scoresshape[1]);
+        std::vector<float> des_host(desshape[0] * desshape[1]);
+
+        // Copy data from GPU to CPU
+        int64_t* kp = (int64_t*)outputs[0].GetTensorMutableData<void>();
+        float* scores = (float*)outputs[1].GetTensorMutableData<void>();
+        float* des = (float*)outputs[2].GetTensorMutableData<void>();
+
+        cudaMemcpy(kp_host.data(), kp, sizeof(int64_t) * kpshape[0] * kpshape[1], cudaMemcpyDeviceToHost);
+        cudaMemcpy(scores_host.data(), scores, sizeof(float) * scoresshape[0] * scoresshape[1], cudaMemcpyDeviceToHost);
+        cudaMemcpy(des_host.data(), des, sizeof(float) * desshape[0] * desshape[1], cudaMemcpyDeviceToHost);
+
+        std::vector<ScoreIndex> scoreIndices;
+
+        cout << "Scores: " << endl << "--------";
+        for (int i = 0; i < keypntcounts; i++) {
+            ScoreIndex si;
+            // si.value = scores[i];
+            si.value = scores_host.data()[i];
+            si.index = i;
+            scoreIndices.push_back(si);
+            // cout << endl << i << ". score: " <<  scores[i];
+        }
+
+        // lambda function
+        std::sort(scoreIndices.begin(), scoreIndices.end(), [](const ScoreIndex& a, const ScoreIndex& b) {
+            return a.value > b.value;
+        });
+
+        // cout << endl << "Sorted Scores: " << endl << "--------" << endl;
+        // for (const ScoreIndex& si : scoreIndices) {
+        //     std::cout << "Index: " << si.index << ", Sorted Value: " << si.value << std::endl;
+        // }
+
+        // keypoints
+
+        // Retrieve nFeatures features with higher scores
+        for (int j = 0; j < nFeatures; j++) {
+            
+            ScoreIndex si = scoreIndices[j];
+            
+            cv::KeyPoint p;
+            int index = si.index * 2;
+            // p.pt.x = (float)kp[index];
+            // p.pt.y = (float)kp[index + 1];
+            p.pt.x = (float)kp_host.data()[index];
+            p.pt.y = (float)kp_host.data()[index + 1];
+            keypoints[j] = p;
+        }
+
+        // for (int i = 0; i < keypntcounts; i++) {
+        // for (int i = 0; i < nFeatures; i++) {
+        //     cv::KeyPoint p;
+        //     int index = i * 2;
+        //     p.pt.x = (float)kp[index];
+        //     p.pt.y = (float)kp[index + 1];
+        //     keypoints[i] = p;
+        // }
+        
+        // std::vector<int64_t> desshape = outputs[2].GetTensorTypeAndShapeInfo().GetShape();
+	    // float* des = (float*)outputs[2].GetTensorMutableData<void>();
+
+        // B.B descriptors
+        cv::Mat desmat = descriptors.getMat();
+        if (desshape[1] < nFeatures) {
+            nFeatures = desshape[1];
+        }
+        desmat.create(cv::Size(desshape[2], nFeatures), CV_32FC1);
+        for (int h = 0; h < nFeatures; h++) {
+            for (int w = 0; w < desshape[2]; w++) {
+                ScoreIndex si = scoreIndices[h];
+                int index = desshape[2] * si.index + w;
+                // desmat.at<float>(h, w) = des[index];
+                desmat.at<float>(h, w) = des_host.data()[index];
+            }
+        }
+        // for (int h = 0; h < nFeatures; h++) {
+        //     for (int w = 0; w < desshape[2]; w++) {
+        //         int index = h * desshape[2] + w;
+        //         desmat.at<float>(h, w) = des[index];
+        //     }
+        // }
+
+
+        // cv::Mat desmat = descriptors.getMat();
+        // desmat.create(cv::Size(desshape[2], desshape[1]), CV_32FC1);
+        // for (int h = 0; h < desshape[1]; h++) {
+        //     for (int w = 0; w < desshape[2]; w++) {
+        //         int index = h * desshape[2] + w;
+        //         desmat.at<float>(h, w) = des[index];
+        //     }
+        // }
+        desmat.copyTo(descriptors);
+    }
+
+    *************************************/
 } // namespace

@@ -146,6 +146,8 @@ namespace ORB_SLAM3
 
                         const cv::Mat &d = F.mDescriptors.row(idx);
 
+                        cout << "B.B Line 149 ORBMatcher.cc. before calling ORBmatcher::DescriptorDistance. Press Enter..."; 
+                        // cin.get();
                         const float dist = DescriptorDistance(MPdescriptor, d);
 
                         if(dist < bestDist) {
@@ -220,6 +222,8 @@ namespace ORB_SLAM3
 
                         const cv::Mat &d = F.mDescriptors.row(idx + F.Nleft);
 
+                        cout << "B.B Line 223 ORBMatcher.cc. before calling ORBmatcher::DescriptorDistance. Press Enter..."; 
+                        // cin.get();
                         const float dist = DescriptorDistance(MPdescriptor,d);
 
                         if(dist<bestDist)
@@ -361,6 +365,8 @@ namespace ORB_SLAM3
                             const cv::Mat &dF = F.mDescriptors.row(realIdxF);
 
                             // B.B calculates the distance between the descriptors and selects the two best matches
+                            cout << "B.B Line 364 ORBMatcher.cc. before calling ORBmatcher::DescriptorDistance. Press Enter..."; 
+                            // cin.get();
                             const float dist =  DescriptorDistance(dKF, dF);
 
                             if(dist < bestDist1) {
@@ -378,6 +384,8 @@ namespace ORB_SLAM3
 
                             const cv::Mat &dF = F.mDescriptors.row(realIdxF);
 
+                            cout << "B.B Line 381 ORBMatcher.cc. before calling ORBmatcher::DescriptorDistance. Press Enter..."; 
+                            // cin.get();
                             const float dist =  DescriptorDistance(dKF,dF);
 
                             if(realIdxF < F.Nleft && dist<bestDist1){
@@ -605,6 +613,8 @@ namespace ORB_SLAM3
 
                 const cv::Mat &dKF = pKF->mDescriptors.row(idx);
 
+                cout << "B.B Line 608 ORBMatcher.cc. before calling ORBmatcher::DescriptorDistance. Press Enter..."; 
+                // cin.get();
                 const float dist = DescriptorDistance(dMP,dKF);
 
                 if(dist<bestDist)
@@ -722,6 +732,8 @@ namespace ORB_SLAM3
 
                 const cv::Mat &dKF = pKF->mDescriptors.row(idx);
 
+                cout << "B.B Line 725 ORBMatcher.cc. before calling ORBmatcher::DescriptorDistance. Press Enter..."; 
+                // cin.get();
                 const float dist = DescriptorDistance(dMP,dKF);
 
                 if(dist<bestDist)
@@ -785,6 +797,8 @@ namespace ORB_SLAM3
 
                 cv::Mat d2 = F2.mDescriptors.row(i2);
 
+                cout << "B.B Line 788 ORBMatcher.cc. before calling ORBmatcher::DescriptorDistance. Press Enter..."; 
+                // cin.get();
                 float dist = DescriptorDistance(d1,d2);
 
                 if(vMatchedDistance[i2]<=dist)
@@ -954,6 +968,8 @@ namespace ORB_SLAM3
 
                         const cv::Mat &d2 = Descriptors2.row(idx2);
 
+                        cout << "B.B Line 957 ORBMatcher.cc. before calling ORBmatcher::DescriptorDistance. Press Enter..."; 
+                        // cin.get();
                         float dist = DescriptorDistance(d1,d2);
 
                         if(dist<bestDist1)
@@ -1155,6 +1171,8 @@ namespace ORB_SLAM3
 
                         const cv::Mat &d2 = pKF2->mDescriptors.row(idx2);
 
+                        cout << "B.B Line 1158 ORBMatcher.cc. before calling ORBmatcher::DescriptorDistance. Press Enter..."; 
+                        // cin.get();
                         const float dist = DescriptorDistance(d1,d2);
 
                         if(dist>TH_LOW || dist>bestDist)
@@ -1455,6 +1473,8 @@ namespace ORB_SLAM3
 
                 const cv::Mat &dKF = pKF->mDescriptors.row(idx);
 
+                cout << "B.B Line 1458 ORBMatcher.cc. before calling ORBmatcher::DescriptorDistance. Press Enter..."; 
+                // cin.get();
                 const float dist = DescriptorDistance(dMP,dKF);
 
                 if(dist<bestDist)
@@ -1583,6 +1603,8 @@ namespace ORB_SLAM3
 
                 const cv::Mat &dKF = pKF->mDescriptors.row(idx);
 
+                cout << "B.B Line 1586 ORBMatcher.cc. before calling ORBmatcher::DescriptorDistance. Press Enter..."; 
+                // cin.get();
                 float dist = DescriptorDistance(dMP,dKF);
 
                 if(dist<bestDist)
@@ -1720,6 +1742,8 @@ namespace ORB_SLAM3
 
                 const cv::Mat &dKF = pKF2->mDescriptors.row(idx);
 
+                cout << "B.B Line 1723 ORBMatcher.cc. before calling ORBmatcher::DescriptorDistance. Press Enter..."; 
+                // cin.get();
                 const float dist = DescriptorDistance(dMP,dKF);
 
                 if(dist<bestDist)
@@ -1802,6 +1826,8 @@ namespace ORB_SLAM3
 
                 const cv::Mat &dKF = pKF1->mDescriptors.row(idx);
 
+                cout << "B.B Line 1805 ORBMatcher.cc. before calling ORBmatcher::DescriptorDistance. Press Enter..."; 
+                // cin.get();
                 const float dist = DescriptorDistance(dMP,dKF);
 
                 if(dist<bestDist)
@@ -1948,6 +1974,8 @@ namespace ORB_SLAM3
 
                         // B.B calculate the distance between the descriptor of the MapPoint (dMP) and 
                         // B.B the descriptors of potential matches in the current frame.
+                        cout << "B.B Line 1951 ORBMatcher.cc. before calling ORBmatcher::DescriptorDistance. Press Enter..."; 
+                        // cin.get();
                         const float dist = DescriptorDistance(dMP, d);
 
                         if(dist < bestDist) {
@@ -2017,6 +2045,9 @@ namespace ORB_SLAM3
                                     continue;
 
                             const cv::Mat &d = CurrentFrame.mDescriptors.row(i2 + CurrentFrame.Nleft);
+
+                            cout << "B.B Line 2021 ORBMatcher.cc. before calling ORBmatcher::DescriptorDistance. Press Enter..."; 
+                            // cin.get();
 
                             const float dist = DescriptorDistance(dMP,d);
 
@@ -2156,6 +2187,10 @@ namespace ORB_SLAM3
                             continue;
 
                         const cv::Mat &d = CurrentFrame.mDescriptors.row(i2);
+
+                        cout << "B.B Line 2160 ORBMatcher.cc. before calling ORBmatcher::DescriptorDistance. Press Enter..."; 
+                        // cin.get();
+
                         const float dist = DescriptorDistance(dMP,d);
 
                         if(dist<bestDist)

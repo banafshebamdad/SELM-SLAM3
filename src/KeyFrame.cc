@@ -117,6 +117,8 @@ void KeyFrame::ComputeBoW() {
         // We assume the vocabulary tree has 6 levels, change the 4 otherwise
         
         // B.B transforming the vCurrentDesc vector into two other vectors, mBowVec and mFeatVec,
+        cout << endl << "B.B in KeyFrame.cc. Line 120 Before calling mpORBvocabulary->transform. Press Enter..."; 
+        // cin.get();
         mpORBvocabulary->transform(vCurrentDesc, mBowVec, mFeatVec, DBOW_LEVELS);
         // mpORBvocabulary->transform(vCurrentDesc,mBowVec,mFeatVec,3);
         // printf("%s Frame - Extracted %d BOW FEATURES \n", __PRETTY_FUNCTION__, mBowVec.size());

@@ -376,6 +376,18 @@ void FrameDrawer::DrawTextInfo(cv::Mat &im, int nState, cv::Mat &imText) {
             BBLogFile_features.close();
         }
 
+        std::ofstream BBLogFile_KFs("/home/banafshe/SUPERSLAM3/my_logs/Banafshe_num_KFs.log", std::ios::app);
+        if (BBLogFile_KFs.is_open()) {
+            BBLogFile_KFs << endl << "FrameId: " << mCurrentFrame.mnId << "\t#KFs: " << nKFs;
+            BBLogFile_KFs.close();
+        }
+
+        std::ofstream BBLogFile_MPs("/home/banafshe/SUPERSLAM3/my_logs/Banafshe_num_MPs.log", std::ios::app);
+        if (BBLogFile_MPs.is_open()) {
+            BBLogFile_MPs << endl << "FrameId: " << mCurrentFrame.mnId << "\t#MPs: " << nMPs;
+            BBLogFile_MPs.close();
+        }
+
         
         if(mnTrackedVO>0)
             s << ", + VO matches: " << mnTrackedVO;

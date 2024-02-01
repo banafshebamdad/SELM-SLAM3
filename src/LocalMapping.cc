@@ -66,7 +66,7 @@ void LocalMapping::Run() {
 
     while(1) {
 
-        // cout << endl << "B.B On top of the Run method of '''Local Mapping''' thread. press Enter...";
+        // cout << endl << "B.B On top of the Run method of ««« LOCAL MAPPING »»» thread. press Enter...";
         // cin.get();
 
         // Tracking will see that Local Mapping is busy
@@ -81,7 +81,7 @@ void LocalMapping::Run() {
             std::chrono::steady_clock::time_point time_StartProcessKF = std::chrono::steady_clock::now();
 #endif
             // BoW conversion and insertion in Map
-            // cout << endl << "B.B On In the Run method of '''Local Mapping''' thread, before ProcessNewKeyFrame(). press Enter...";
+            cout << endl << "B.B BoW conversion and insertion in Map. On In the Run method of '''Local Mapping''' thread, before ProcessNewKeyFrame(). press Enter...";
             // cin.get();
             
             ProcessNewKeyFrame();
@@ -283,7 +283,7 @@ void LocalMapping::InsertKeyFrame(KeyFrame *pKF) {
     mlNewKeyFrames.push_back(pKF);
     mbAbortBA = true;
 
-    // cout << "B.B At the end of LocalMapping::InsertKeyFrame. press Enter...";
+    // cout << "B.B At the end of LocalMapping::InsertKeyFrame. press Enter..."; 
     // cin.get();
 }
 

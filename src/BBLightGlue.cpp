@@ -124,12 +124,14 @@ namespace SELMSLAM {
         vector<float> kp1;
         vector<float> kp2;
 
+        // determine the size of the vectors
         kp1.resize(features1.keypoints.size() * 2);
         kp2.resize(features2.keypoints.size() * 2);
 
         float f1wid = features1.img_size.width / 2.0f;
         float f1hei = features1.img_size.height / 2.0f;
 
+        // initialize the value of the vectors
         for (int i = 0; i < features1.keypoints.size(); i++) {
             kp1[2 * i] = (features1.keypoints[i].pt.x - f1wid) / f1wid;
             kp1[2 * i + 1] = (features1.keypoints[i].pt.y - f1hei) / f1hei;

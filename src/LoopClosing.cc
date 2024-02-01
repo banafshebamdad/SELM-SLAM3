@@ -87,8 +87,7 @@ void LoopClosing::SetLocalMapper(LocalMapping *pLocalMapper)
 }
 
 
-void LoopClosing::Run()
-{
+void LoopClosing::Run() {
     mbFinished = false;
 
     while(1) {
@@ -110,7 +109,19 @@ void LoopClosing::Run()
             std::chrono::steady_clock::time_point time_StartPR = std::chrono::steady_clock::now();
 #endif
 
+            /**
+             * B.B
+             * The following line is temporarilycommented by banafshe Bamdad
+             * I initialize bool bFindedRegion = false (temporarily)
+             * 
+             * Reason:
+             * LoopClosing::DetectCommonRegionsFromBoW is using ORBmatcher
+             *  The above method is used in LoopClosing::NewDetectCommonRegions
+             *      The above method is used in the LoopClosing::Run
+             *          bool bFindedRegion = NewDetectCommonRegions();
+            */
             bool bFindedRegion = NewDetectCommonRegions();
+            // bool bFindedRegion = false; // Initializaed temporarily by Banafshe Bamdad
 
 #ifdef REGISTER_TIMES
             std::chrono::steady_clock::time_point time_EndPR = std::chrono::steady_clock::now();
@@ -322,11 +333,17 @@ bool LoopClosing::CheckNewKeyFrames()
     return(!mlpLoopKeyFrameQueue.empty());
 }
 
-bool LoopClosing::NewDetectCommonRegions()
-{
+bool LoopClosing::NewDetectCommonRegions() {
     // To deactivate placerecognition. No loopclosing nor merging will be performed
-    if(!mbActiveLC)
+
+    // B.B the following retun command is temporarily added by banafshe Bamdad
+    // cout << endl << "B.B in LoopClosing::NewDetectCommonRegions. press enter to rerurn false..."; 
+    // cin.get();
+    // return false;
+
+    if(!mbActiveLC){ 
         return false;
+    }
 
     {
         unique_lock<mutex> lock(mMutexLoopQueue);
@@ -394,7 +411,10 @@ bool LoopClosing::NewDetectCommonRegions()
             mvpLoopMatchedMPs = vpMatchedMPs;
 
 
+            // Commented by Banafshe to disable LoopClosing functionality, mbLoopDetected = false; added by Banafshe
             mbLoopDetected = mnLoopNumCoincidences >= 3;
+            // mbLoopDetected = false; // B.B
+            cout << endl << "B.B in LoopClosing class. mbLoopDetected: " << boolalpha << mbLoopDetected;
             mnLoopNumNotFound = 0;
 
             if(!mbLoopDetected)
@@ -505,7 +525,9 @@ bool LoopClosing::NewDetectCommonRegions()
     //Loop candidates
     if(!bLoopDetectedInKF && !vpLoopBowCand.empty())
     {
+        // commented by Banafshe to disable LoopClosing functionality, mbLoopDetected = false; added by Banafshe
         mbLoopDetected = DetectCommonRegionsFromBoW(vpLoopBowCand, mpLoopMatchedKF, mpLoopLastCurrentKF, mg2oLoopSlw, mnLoopNumCoincidences, mvpLoopMPs, mvpLoopMatchedMPs);
+        // mbLoopDetected = false; // B.B
     }
     // Merge candidates
     if(!bMergeDetectedInKF && !vpMergeBowCand.empty())

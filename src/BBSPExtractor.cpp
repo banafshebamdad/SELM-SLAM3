@@ -30,7 +30,7 @@ namespace SELMSLAM {
 
         if(_image.empty()) {
             cout << "B.B In BBSPExtractor::operator. _image is empty. Press Enter ...";
-            cin.get();
+            // cin.get();
             return -1; 
         }
 

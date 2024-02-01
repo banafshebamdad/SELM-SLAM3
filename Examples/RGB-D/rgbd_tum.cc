@@ -17,14 +17,16 @@
 */
 
 /**
+ * $ source /home/banafshe/global_env/bin/activate
  * $ cd /media/banafshe/Banafshe_2TB/Datasets/TUM
- * $ python associate.py /path/to/rgb.txt /path/to/depth.txt > /path/to/dataset/sequence/associations.txt
+ * $ python associate.py /path/to/dataset/sequence/rgb.txt /path/to/dataset/sequence/depth.txt > /path/to/dataset/sequence/associations.txt
 */
 
 // B.B
 // Testing and Debugging
-//      $ ./Examples/RGB-D/rgbd_tum Vocabulary/ORBvoc.txt Examples/RGB-D/TUM1.yaml /media/banafshe/Banafshe_2TB/Datasets/TUM/Testing_and_Debugging/xyz/rgbd_dataset_freiburg1_xyz /media/banafshe/Banafshe_2TB/Datasets/TUM/Testing_and_Debugging/xyz/rgbd_dataset_freiburg1_xyz/associations.txt
-//      $ ./Examples/RGB-D/rgbd_tum Vocabulary/ORBvoc.txt Examples/RGB-D/TUM2.yaml /media/banafshe/Banafshe_2TB/Datasets/TUM/Testing_and_Debugging/xyz/rgbd_dataset_freiburg2_xyz /media/banafshe/Banafshe_2TB/Datasets/TUM/Testing_and_Debugging/xyz/rgbd_dataset_freiburg2_xyz/associations.txt
+// ./Examples/RGB-D/rgbd_tum Vocabulary/ORBvoc.txt Examples/RGB-D/TUM1.yaml /media/banafshe/Banafshe_2TB/Datasets/TUM/Testing_and_Debugging/xyz/rgbd_dataset_freiburg1_xyz /media/banafshe/Banafshe_2TB/Datasets/TUM/Testing_and_Debugging/xyz/rgbd_dataset_freiburg1_xyz/associations.txt
+// ./Examples/RGB-D/rgbd_tum Vocabulary/ORBvoc.txt Examples/RGB-D/TUM1.yaml /media/banafshe/Banafshe_2TB/Datasets/TUM/Testing_and_Debugging/rpy/rgbd_dataset_freiburg1_rpy /media/banafshe/Banafshe_2TB/Datasets/TUM/Testing_and_Debugging/rpy/rgbd_dataset_freiburg1_rpy/associations.txt
+// ./Examples/RGB-D/rgbd_tum Vocabulary/ORBvoc.txt Examples/RGB-D/TUM2.yaml /media/banafshe/Banafshe_2TB/Datasets/TUM/Testing_and_Debugging/xyz/rgbd_dataset_freiburg2_xyz /media/banafshe/Banafshe_2TB/Datasets/TUM/Testing_and_Debugging/xyz/rgbd_dataset_freiburg2_xyz/associations.txt
 
 // Dynamic objects
 //  $ ./Examples/RGB-D/rgbd_tum Vocabulary/ORBvoc.txt Examples/RGB-D/TUM2.yaml /media/banafshe/Banafshe_2TB/Datasets/TUM/Dynamic_Objects/rgbd_dataset_freiburg2_desk_with_person /media/banafshe/Banafshe_2TB/Datasets/TUM/Dynamic_Objects/rgbd_dataset_freiburg2_desk_with_person/associations.txt
@@ -37,10 +39,25 @@
 //      $ ./Examples/RGB-D/rgbd_tum Vocabulary/ORBvoc.txt Examples/RGB-D/TUM3.yaml /media/banafshe/Banafshe_2TB/Datasets/TUM/Structure_vs_Texture/rgbd_dataset_freiburg3_structure_texture_far /media/banafshe/Banafshe_2TB/Datasets/TUM/Structure_vs_Texture/rgbd_dataset_freiburg3_structure_texture_far/associations.txt
 
 // Handheld SLAM
+// ./Examples/RGB-D/rgbd_tum Vocabulary/ORBvoc.txt Examples/RGB-D/TUM1.yaml /media/banafshe/Banafshe_2TB/Datasets/TUM/Handheld_SLAM/rgbd_dataset_freiburg1_360 /media/banafshe/Banafshe_2TB/Datasets/TUM/Handheld_SLAM/rgbd_dataset_freiburg1_360/associations.txt
+// ./Examples/RGB-D/rgbd_tum Vocabulary/ORBvoc.txt Examples/RGB-D/TUM1.yaml /media/banafshe/Banafshe_2TB/Datasets/TUM/Handheld_SLAM/rgbd_dataset_freiburg1_desk /media/banafshe/Banafshe_2TB/Datasets/TUM/Handheld_SLAM/rgbd_dataset_freiburg1_desk/associations.txt
+// ./Examples/RGB-D/rgbd_tum Vocabulary/ORBvoc.txt Examples/RGB-D/TUM1.yaml /media/banafshe/Banafshe_2TB/Datasets/TUM/Handheld_SLAM/rgbd_dataset_freiburg1_desk2 /media/banafshe/Banafshe_2TB/Datasets/TUM/Handheld_SLAM/rgbd_dataset_freiburg1_desk2/associations.txt
+// ./Examples/RGB-D/rgbd_tum Vocabulary/ORBvoc.txt Examples/RGB-D/TUM1.yaml /media/banafshe/Banafshe_2TB/Datasets/TUM/Handheld_SLAM/rgbd_dataset_freiburg1_floor /media/banafshe/Banafshe_2TB/Datasets/TUM/Handheld_SLAM/rgbd_dataset_freiburg1_floor/associations.txt
+// ./Examples/RGB-D/rgbd_tum Vocabulary/ORBvoc.txt Examples/RGB-D/TUM1.yaml /media/banafshe/Banafshe_2TB/Datasets/TUM/Handheld_SLAM/rgbd_dataset_freiburg1_room /media/banafshe/Banafshe_2TB/Datasets/TUM/Handheld_SLAM/rgbd_dataset_freiburg1_room/associations.txt
 // ./Examples/RGB-D/rgbd_tum Vocabulary/ORBvoc.txt Examples/RGB-D/TUM2.yaml /media/banafshe/Banafshe_2TB/Datasets/TUM/Handheld_SLAM/rgbd_dataset_freiburg2_360_kidnap /media/banafshe/Banafshe_2TB/Datasets/TUM/Handheld_SLAM/rgbd_dataset_freiburg2_360_kidnap/associations.txt
 
+// 3D Object Reconstruction
+// ./Examples/RGB-D/rgbd_tum Vocabulary/ORBvoc.txt Examples/RGB-D/TUM1.yaml /media/banafshe/Banafshe_2TB/Datasets/TUM/3D_Object_Reconstruction/rgbd_dataset_freiburg1_plant /media/banafshe/Banafshe_2TB/Datasets/TUM/3D_Object_Reconstruction/rgbd_dataset_freiburg1_plant/associations.txt
+// ./Examples/RGB-D/rgbd_tum Vocabulary/ORBvoc.txt Examples/RGB-D/TUM1.yaml /media/banafshe/Banafshe_2TB/Datasets/TUM/3D_Object_Reconstruction/rgbd_dataset_freiburg1_teddy /media/banafshe/Banafshe_2TB/Datasets/TUM/3D_Object_Reconstruction/rgbd_dataset_freiburg1_teddy/associations.txt
+
+
+// TartarAir
+// ./Examples/RGB-D/rgbd_tum Vocabulary/ORBvoc.txt Examples/RGB-D/TartanAir.yaml /media/banafshe/Banafshe_2TB/Datasets/TartanAir/my_test_sequences/hospital_hard/P037 /media/banafshe/Banafshe_2TB/Datasets/TartanAir/my_test_sequences/hospital_hard/P037/associations.txt
 // B.B to test embedding Python to C++
 // $ ./Examples/RGB-D/rgbd_tum Vocabulary/ORBvoc.txt Examples/RGB-D/TUM3.yaml /media/banafshe/Banafshe_2TB/Datasets/TUM/Dynamic_Objects/rgbd_dataset_freiburg3_walking_xyz /media/banafshe/Banafshe_2TB/Datasets/TUM/Dynamic_Objects/rgbd_dataset_freiburg3_walking_xyz/associations.txt python_for_c multiply 2 3
+
+// ICL-NUIM
+// $ ./Examples/RGB-D/rgbd_tum Vocabulary/ORBvoc.txt Examples/RGB-D/ICL-NUIM.yaml /media/banafshe/Banafshe_2TB/Datasets/ICL-NUIM/living_room/Ir_kt1/living_room_traj1_frei_png /media/banafshe/Banafshe_2TB/Datasets/ICL-NUIM/living_room/Ir_kt1/living_room_traj1_frei_png/associations.txt
 
 #include<iostream>
 #include<algorithm>

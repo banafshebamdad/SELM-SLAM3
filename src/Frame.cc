@@ -1032,6 +1032,8 @@ void Frame::ComputeBoW() {
 
         // B.B computes the Bag of Words (BoW) representation for the frame.
         // B.B DBOW_LEVELS: likely specifies the depth or level of the vocabulary tree to use during the BoW transformation
+        cout << endl << "B.B in Frame.cc. Line 1035. Before calling mpORBvocabulary->transform. Press Enter..."; 
+        // cin.get();
         mpORBvocabulary->transform(vCurrentDesc, mBowVec, mFeatVec, DBOW_LEVELS); // B.B ACHTUNG ACHTUNG !!!
         // cout << endl << "B.B In Frame::ComputeBoW, vCurrentDesc size: " << vCurrentDesc.size() << ", DBOW_LEVELS: " << DBOW_LEVELS << endl;
         
@@ -1183,6 +1185,10 @@ void Frame::ComputeStereoMatches() {
             if(uR>=minU && uR<=maxU)
             {
                 const cv::Mat &dR = mDescriptorsRight.row(iR);
+
+                cout << "B.B Line 1187 Frame.cc. before calling ORBmatcher::DescriptorDistance. Press Enter...";
+                // cin.get();
+
                 const int dist = ORBmatcher::DescriptorDistance(dL,dR);
 
                 if(dist<bestDist)

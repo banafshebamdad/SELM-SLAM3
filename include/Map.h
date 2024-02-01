@@ -46,12 +46,12 @@ class Map
     void serialize(Archive &ar, const unsigned int version)
     {
         ar & mnId;
-        ar & mnInitKFid;
-        ar & mnMaxKFid;
-        ar & mnBigChangeIdx;
+        ar & mnInitKFid; 
+        ar & mnMaxKFid; 
+        ar & mnBigChangeIdx; 
 
         // Save/load a set structure, the set structure is broken in libboost 1.58 for ubuntu 16.04, a vector is serializated
-        //ar & mspKeyFrames;
+        //ar & mspKeyFrames; 
         //ar & mspMapPoints;
         ar & mvpBackupKeyFrames;
         ar & mvpBackupMapPoints;
@@ -85,8 +85,8 @@ public:
     std::vector<MapPoint*> GetAllMapPoints();
     std::vector<MapPoint*> GetReferenceMapPoints();
 
-    long unsigned int MapPointsInMap();
-    long unsigned  KeyFramesInMap();
+    long unsigned int MapPointsInMap(); // B.B the number of map points in the map
+    long unsigned  KeyFramesInMap(); // B.B the number of keyframes in the map
 
     long unsigned int GetId();
 
@@ -137,7 +137,7 @@ public:
 
     vector<KeyFrame*> mvpKeyFrameOrigins;
     vector<unsigned long int> mvBackupKeyFrameOriginsId;
-    KeyFrame* mpFirstRegionKF;
+    KeyFrame* mpFirstRegionKF; // B.B Pointer to the first keyframe in a region
     std::mutex mMutexMapUpdate;
 
     // This avoid that two points are created simultaneously in separate threads (id conflict)
@@ -152,19 +152,25 @@ public:
     static long unsigned int nNextId;
 
     // DEBUG: show KFs which are used in LBA
-    std::set<long unsigned int> msOptKFs;
+    std::set<long unsigned int> msOptKFs; // B.b Set of keyframes used in Local Bundle Adjustment
     std::set<long unsigned int> msFixedKFs;
+
+    /**
+     * B.B I relocated this member from protected: area to public: area of header file. 
+     * I just use the value of this member in tracking::Relocalization method and do not modify it 
+    */
+    std::set<KeyFrame*> mspKeyFrames; // B.B Set of keyframes in the map.
 
 protected:
 
     long unsigned int mnId;
 
-    std::set<MapPoint*> mspMapPoints;
-    std::set<KeyFrame*> mspKeyFrames;
+    std::set<MapPoint*> mspMapPoints; // B.B Set of map points in the map.
+    // std::set<KeyFrame*> mspKeyFrames; // B.B Set of keyframes in the map. Banafshe commented this line and move it to Public are. I just use the value of this member in tracking::Relocalization method and do not modify it
 
     // Save/load, the set structure is broken in libboost 1.58 for ubuntu 16.04, a vector is serializated
-    std::vector<MapPoint*> mvpBackupMapPoints;
-    std::vector<KeyFrame*> mvpBackupKeyFrames;
+    std::vector<MapPoint*> mvpBackupMapPoints; // b.B Vector of backup map points for save/load operations.
+    std::vector<KeyFrame*> mvpBackupKeyFrames; // B.B Vector of backup keyframes for save/load operations
 
     KeyFrame* mpKFinitial;
     KeyFrame* mpKFlowerID;
@@ -179,8 +185,8 @@ protected:
     int mnMapChange;
     int mnMapChangeNotified;
 
-    long unsigned int mnInitKFid;
-    long unsigned int mnMaxKFid;
+    long unsigned int mnInitKFid; // B.B keyframe that is used to initialize the map
+    long unsigned int mnMaxKFid; // B.B Maximum keyframe identifier in the map
     //long unsigned int mnLastLoopKFid;
 
     // Index related to a big change in the map (loop closure, global BA)

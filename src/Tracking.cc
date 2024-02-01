@@ -1863,6 +1863,28 @@ void Tracking::Track() {
     printf("\n\n\n INIT TRACKING PIPELINE -------- (B.B start) ------------");
     cout << endl << "\t\tFrameId: " << mCurrentFrame.mnId << endl;
 
+    std::set<KeyFrame*> bb_mspKeyFrames =  mpAtlas->GetCurrentMap()->mspKeyFrames;
+    cout << endl << "B.B The number of keyframe in map: " << bb_mspKeyFrames.size() << ". Press Enter...";
+
+    std::vector<KeyFrame*> bb_vpCandidateKFs(bb_mspKeyFrames.begin(), bb_mspKeyFrames.end());
+    cout << endl << "B.B The number of candidate keyframes: " << bb_vpCandidateKFs.size() << ". Press Enter..."; 
+
+    // B.B sort the vector based on KeyFrame.mnId
+    std::sort(bb_vpCandidateKFs.begin(), bb_vpCandidateKFs.end(),
+              [](const KeyFrame* kf1, const KeyFrame* kf2) {
+                std::cout << "Comparing mnId: " << kf1->mnId << " and " << kf2->mnId << std::endl;
+                return kf1->mnId < kf2->mnId;
+              });
+
+    std::reverse(bb_vpCandidateKFs.begin(), bb_vpCandidateKFs.end());
+    for (const auto& keyFramePtr : bb_vpCandidateKFs) {
+        std::cout << "sorted mnId: " << keyFramePtr->mnId << std::endl;
+    }
+
+    for (const auto& kfp: bb_mspKeyFrames) {
+        cout << endl << "KF mnId: " << kfp->mnId;
+    }
+
     if (bStepByStep) {
         std::cout << "Tracking: Waiting to the next step" << std::endl;
         while(!mbStep && bStepByStep)
@@ -1974,9 +1996,9 @@ void Tracking::Track() {
 
     if(mState == NOT_INITIALIZED) {
 
-        if(mSensor == System::STEREO || mSensor == System::RGBD || mSensor == System::IMU_STEREO || mSensor == System::IMU_RGBD) {
+        if (mSensor == System::STEREO || mSensor == System::RGBD || mSensor == System::IMU_STEREO || mSensor == System::IMU_RGBD) {
 
-            StereoInitialization();
+           StereoInitialization();
 
         } else {
             MonocularInitialization();
@@ -2168,9 +2190,9 @@ void Tracking::Track() {
             }
         }
 
-        if(!mCurrentFrame.mpReferenceKF)
+        if(!mCurrentFrame.mpReferenceKF) {
             mCurrentFrame.mpReferenceKF = mpReferenceKF;
-
+        }
 #ifdef REGISTER_TIMES
         std::chrono::steady_clock::time_point time_EndPosePred = std::chrono::steady_clock::now();
 
@@ -2208,9 +2230,9 @@ void Tracking::Track() {
             }
         }
 
-        if(bOK)
+        if(bOK) {
             mState = OK;
-        else if (mState == OK) {
+        } else if (mState == OK) {
             if (mSensor == System::IMU_MONOCULAR || mSensor == System::IMU_STEREO || mSensor == System::IMU_RGBD) {
                 Verbose::PrintMess("Track lost for less than one second...", Verbose::VERBOSITY_NORMAL);
                 if(!pCurrentMap->isImuInitialized() || !pCurrentMap->GetIniertialBA2()) {
@@ -2274,9 +2296,6 @@ void Tracking::Track() {
                 Sophus::SE3f LastTwc = mLastFrame.GetPose().inverse();
                 mVelocity = mCurrentFrame.GetPose() * LastTwc;
 
-                // cout << endl << "B.B In Tracking::Track(). Here mbVelocity is set to true. Press Enter ...";
-                // cin.get();
-
                 mbVelocity = true;
             } else {
                 mbVelocity = false;
@@ -2329,6 +2348,8 @@ void Tracking::Track() {
             vdNewKF_ms.push_back(timeNewKF);
 #endif
 
+
+            // B.B high innovation: deviate significantly, residual
             // We allow points with high innovation (considererd outliers by the Huber Function)
             // pass to the new keyframe, so that bundle adjustment will finally decide
             // if they are outliers or not. We don't want next frame to estimate its position
@@ -2358,8 +2379,9 @@ void Tracking::Track() {
             return;
         }
 
-        if(!mCurrentFrame.mpReferenceKF)
+        if(!mCurrentFrame.mpReferenceKF){
             mCurrentFrame.mpReferenceKF = mpReferenceKF;
+        }
 
         mLastFrame = Frame(mCurrentFrame);
     } // B.B end of else for if(mState == NOT_INITIALIZED) statement.
@@ -2603,7 +2625,7 @@ void Tracking::StereoInitialization() {
         TOC
 
         cout << endl << "Initialization is finished. Press Enter...";
-        cin.get();
+        // cin.get();
 
     } else { // B.B 
         cout << endl << "B.B In Tracking::StereoInitialization(), Malheureusement, le nombre de Features extraites est mois de 500." << endl;
@@ -2867,8 +2889,6 @@ void Tracking::CreateMapInAtlas()
 // B.B Local Mapping might have changed some MapPoints tracked in last frame
 void Tracking::CheckReplacedInLastFrame() {
 
-    // cout << endl << "B.B In Tracking::CheckReplacedInLastFrame, mLastFrame.N=" << mLastFrame.N << endl;
-
     for(int i = 0; i < mLastFrame.N; i++) {
         MapPoint* pMP = mLastFrame.mvpMapPoints[i];
 
@@ -3012,7 +3032,7 @@ void Tracking::UpdateLastFrame() {
      * mlRelativeFramePoses is a list used to recover the full camera trajectory at the end of the execution.
      * The reference keyFrame for each frame and its relative transformation are stored.
     */
-    // B.b fetches the relative pose between the last frame and the reference keyframe
+    // B.B fetches the relative pose between the last frame and the reference keyframe
     Sophus::SE3f Tlr = mlRelativeFramePoses.back();
 
     // B.B updates the pose of the last frame by applying the relative pose to the reference keyframe's pose.
@@ -3040,10 +3060,10 @@ void Tracking::UpdateLastFrame() {
     if(vDepthIdx.empty())
         return;
 
-    // B.b sorted in ascending order based on depth values.
+    // B.B sorted in ascending order based on depth values.
     sort(vDepthIdx.begin(), vDepthIdx.end());
 
-    // We insert all close points (depth<mThDepth)
+    // We insert all close points (depth < mThDepth)
     // If less than 100 close points, we insert the 100 closest ones.
     // B.B keeps track of the number of points processed.
     int nPoints = 0;
@@ -3082,9 +3102,9 @@ void Tracking::UpdateLastFrame() {
         }
 
         // B.B The loop breaks if the depth exceeds the mThDepth threshold and a sufficient number of points have been processed.
-        if(vDepthIdx[j].first > mThDepth && nPoints > 100)
+        if(vDepthIdx[j].first > mThDepth && nPoints > 100) {
             break;
-
+        }
     }
 }
 
@@ -3105,7 +3125,7 @@ bool Tracking::TrackWithMotionModel() {
         PredictStateIMU();
         return true;
     } else {
-        mCurrentFrame.SetPose(mVelocity * mLastFrame.GetPose());
+        mCurrentFrame.SetPose(mVelocity * mLastFrame.GetPose()); // B.B set the initial pose for current frame
     }
 
     // B.B fill the range [first, last) with copies of value
@@ -3220,6 +3240,9 @@ bool Tracking::TrackLocalMap() {
 
     // TOO check outliers before PO
     // B.B to count the number of features with associated map points and the number of features marked as outliers, 
+
+    // ‌What are these variables user for? They are initialized again by zero, without using the calculated values in the following loop.
+    // B.B I belive this code snippet is useless,
     int aux1 = 0, aux2 = 0;
     for(int i = 0; i < mCurrentFrame.N; i++) {
 
@@ -3307,17 +3330,16 @@ bool Tracking::TrackLocalMap() {
         } else
             return true;
     } else {
-        if(mnMatchesInliers < 30)
+        if(mnMatchesInliers < 10) { // B.B !!! ACHTUNG ACHTUNG !!! Banafshe changed the value from 30 to 20 in order to bypass the relocalization process
             return false;
-        else
+        } else {
             return true;
+        }
     }
 }
 
-bool Tracking::NeedNewKeyFrame()
-{
-    if((mSensor == System::IMU_MONOCULAR || mSensor == System::IMU_STEREO || mSensor == System::IMU_RGBD) && !mpAtlas->GetCurrentMap()->isImuInitialized())
-    {
+bool Tracking::NeedNewKeyFrame() {
+    if((mSensor == System::IMU_MONOCULAR || mSensor == System::IMU_STEREO || mSensor == System::IMU_RGBD) && !mpAtlas->GetCurrentMap()->isImuInitialized()) {
         if (mSensor == System::IMU_MONOCULAR && (mCurrentFrame.mTimeStamp-mpLastKeyFrame->mTimeStamp)>=0.25)
             return true;
         else if ((mSensor == System::IMU_STEREO || mSensor == System::IMU_RGBD) && (mCurrentFrame.mTimeStamp-mpLastKeyFrame->mTimeStamp)>=0.25)
@@ -3326,10 +3348,13 @@ bool Tracking::NeedNewKeyFrame()
             return false;
     }
 
-    if(mbOnlyTracking)
+    if(mbOnlyTracking){
         return false;
+    }
 
     // If Local Mapping is freezed by a Loop Closure do not insert keyframes
+    cout << endl << "B.B Local Mapping is freezed by a Loop Closure do not insert keyframes: " << boolalpha << (mpLocalMapper->isStopped() || mpLocalMapper->stopRequested()); 
+
     if(mpLocalMapper->isStopped() || mpLocalMapper->stopRequested()) {
         /*if(mSensor == System::MONOCULAR)
         {
@@ -3341,15 +3366,15 @@ bool Tracking::NeedNewKeyFrame()
     const int nKFs = mpAtlas->KeyFramesInMap();
 
     // Do not insert keyframes if not enough frames have passed from last relocalisation
-    if(mCurrentFrame.mnId<mnLastRelocFrameId+mMaxFrames && nKFs>mMaxFrames)
-    {
+    if(mCurrentFrame.mnId<mnLastRelocFrameId+mMaxFrames && nKFs>mMaxFrames) {
         return false;
     }
 
     // Tracked MapPoints in the reference keyframe
     int nMinObs = 3;
-    if(nKFs<=2)
-        nMinObs=2;
+    if(nKFs <= 2) {
+        nMinObs = 2;
+    }    
     int nRefMatches = mpReferenceKF->TrackedMapPoints(nMinObs);
 
     // Local Mapping accept keyframes?
@@ -3359,8 +3384,7 @@ bool Tracking::NeedNewKeyFrame()
     int nNonTrackedClose = 0;
     int nTrackedClose= 0;
 
-    if(mSensor!=System::MONOCULAR && mSensor!=System::IMU_MONOCULAR)
-    {
+    if(mSensor!=System::MONOCULAR && mSensor!=System::IMU_MONOCULAR) {
         int N = (mCurrentFrame.Nleft == -1) ? mCurrentFrame.N : mCurrentFrame.Nleft;
         for(int i =0; i<N; i++)
         {
@@ -3377,12 +3401,13 @@ bool Tracking::NeedNewKeyFrame()
     }
 
     bool bNeedToInsertClose;
-    bNeedToInsertClose = (nTrackedClose<100) && (nNonTrackedClose>70);
+    bNeedToInsertClose = (nTrackedClose < 100) && (nNonTrackedClose > 70);
 
     // Thresholds
     float thRefRatio = 0.75f;
-    if(nKFs<2)
+    if(nKFs < 2){
         thRefRatio = 0.4f;
+    }
 
     /*int nClosedPoints = nTrackedClose + nNonTrackedClose;
     const int thStereoClosedPoints = 15;
@@ -3392,13 +3417,13 @@ bool Tracking::NeedNewKeyFrame()
         thRefRatio = 0.9f;
     }*/
 
-    if(mSensor==System::MONOCULAR)
+    if(mSensor==System::MONOCULAR) {
         thRefRatio = 0.9f;
+    }
 
     if(mpCamera2) thRefRatio = 0.75f;
 
-    if(mSensor==System::IMU_MONOCULAR)
-    {
+    if(mSensor==System::IMU_MONOCULAR) {
         if(mnMatchesInliers>350) // Points tracked from the local map
             thRefRatio = 0.75f;
         else
@@ -3865,15 +3890,153 @@ void Tracking::UpdateLocalKeyFrames()
     }
 }
 
-bool Tracking::Relocalization()
-{
+// B.B This method attempts to relocalize the current frame by finding a keyframe in the database that is similar to the current frame.
+
+/*********************
+bool Tracking::Relocalization() {
+    cout << endl << "B.B Starting relocalization. Press Enter..."; 
+    cout << endl << "B.B The number of keyframe in map: " << mpAtlas->GetCurrentMap()->KeyFramesInMap() << ". Press Enter..."; 
+
+    // 
+    // B.B Step 1. Retrieve KeyFrames in current Map
+    // 
+    std::set<KeyFrame*> bb_mspKeyFrames = mpAtlas->GetCurrentMap()->mspKeyFrames;
+    std::vector<KeyFrame*> vpCandidateKFs(bb_mspKeyFrames.begin(), bb_mspKeyFrames.end());
+    cout << endl << "B.B The number of candidate keyframes: " << vpCandidateKFs.size(); 
+
+    // B.B sort the vector based on KeyFrame.mnId
+    std::sort(vpCandidateKFs.begin(), vpCandidateKFs.end(),
+              [](const KeyFrame* kf1, const KeyFrame* kf2) {
+                std::cout << "Comparing mnId: " << kf1->mnId << " and " << kf2->mnId << std::endl;
+                return kf1->mnId < kf2->mnId;
+              });
+
+    std::reverse(vpCandidateKFs.begin(), vpCandidateKFs.end());
+    // B.B sorted Keyframes based on mnIds
+    for (const auto& keyFramePtr : vpCandidateKFs) {
+        std::cout << "sorted mnId: " << keyFramePtr->mnId << std::endl;
+    }
+
+    if(vpCandidateKFs.empty()) {
+        Verbose::PrintMess("There are not candidates", Verbose::VERBOSITY_NORMAL);
+        return false;
+    }
+
+    const int nKFs = vpCandidateKFs.size();
+
+    // 
+    // Step 2.
+    // 
+    // B.B performs an LightGlue/ORB matching and then attempt to find a camera pose using the PnP algorithm.
+    // B.B The results of the matching are stored in the vpMapPointMatches vector.
+    
+    bool bMatch = false;
+
+    for(int i = 0; i < nKFs; i++) {
+        bool bMatch = false;
+        KeyFrame* pKF = vpCandidateKFs[i];
+        if(pKF->isBad()) {
+            continue;
+        } else {
+
+            // B.B I first perform a LightGlue matching with each KeyFrame in the current map
+            // B.B If enough matches are found I setup a PnP solver to estimate the pose of the camera
+            
+            vector<MapPoint*> vpMapPointMatches;
+            SELMSLAM::BBLGMatcher bbmatcher;
+            int nmatches = bbmatcher.SearchByLG(pKF, mCurrentFrame, vpMapPointMatches);
+            
+            if(nmatches < 15) {
+                continue;
+            } else {
+                MLPnPsolver* pSolver = new MLPnPsolver(mCurrentFrame, vpMapPointMatches);
+                pSolver->SetRansacParameters(0.99, 10, 300, 6, 0.5, 5.991);  //This solver needs at least 6 points
+                
+                // bool bMatch = false;
+                vector<bool> vbInliers;
+                int nInliers;
+                bool bNoMore;
+
+                Eigen::Matrix4f eigTcw;
+                bool bTcw = pSolver->iterate(5, bNoMore, vbInliers, nInliers, eigTcw);
+
+                // If Ransac reachs max. iterations discard keyframe
+                if(bNoMore) {
+                    continue;
+                }
+
+                // If a Camera Pose is computed, optimize
+                if(bTcw) {
+                    Sophus::SE3f Tcw(eigTcw);
+                    mCurrentFrame.SetPose(Tcw);
+
+                    const int np = vbInliers.size();
+
+                    for(int j = 0; j < np; j++) {
+                        if(vbInliers[j]) {
+                            mCurrentFrame.mvpMapPoints[j] = vpMapPointMatches[j];
+                        } else {
+                            mCurrentFrame.mvpMapPoints[j] = NULL;
+                        }
+                    }
+
+                    int nGood = Optimizer::PoseOptimization(&mCurrentFrame);
+
+                    if(nGood < 50) {
+                        continue;
+                    }
+
+                    for(int io = 0; io < mCurrentFrame.N; io++) {
+                        if(mCurrentFrame.mvbOutlier[io]) {
+                            mCurrentFrame.mvpMapPoints[io] = static_cast<MapPoint*>(NULL);
+                        }
+                    }
+
+                    // If the pose is supported by enough inliers stop ransacs and continue
+                    bMatch = true;
+                    break;
+                } // B.B end of If a Camera Pose is computed, optimize
+            }
+        }
+    }
+
+    if(!bMatch) {
+        return false;
+    } else {
+        mnLastRelocFrameId = mCurrentFrame.mnId;
+        cout << "Relocalized!!" << endl;
+        cout << "B.B Press Enter..."; 
+        // cin.get();
+        return true;
+    }
+
+}
+*/
+
+// B.B original version, DO NOT delete this method
+bool Tracking::Relocalization() {
     Verbose::PrintMess("Starting relocalization", Verbose::VERBOSITY_NORMAL);
+    
+    cout << endl << "B.B Starting relocalization. Press Enter..."; 
+    // cin.get();
+    // cout << endl << "B.B The number of keyframe in map: " << mpAtlas->GetCurrentMap()->KeyFramesInMap() << ". Press Enter..."; 
+    // cin.get();
+
     // Compute Bag of Words Vector
-    mCurrentFrame.ComputeBoW();
+    // #ifndef USE_SELM_EXTRACTOR
+        mCurrentFrame.ComputeBoW();
+    // #endif
 
     // Relocalization is performed when tracking is lost
     // Track Lost: Query KeyFrame Database for keyframe candidates for relocalisation
+    // B.B The folloing line is temporarily commented by Banafshe and replaced with the following code snippet.
     vector<KeyFrame*> vpCandidateKFs = mpKeyFrameDB->DetectRelocalizationCandidates(&mCurrentFrame, mpAtlas->GetCurrentMap());
+    // B.B ??? Does the order of KFs matter???
+    // std::set<KeyFrame*> mspKeyFrames = mpAtlas->GetCurrentMap()->mspKeyFrames;
+    // std::vector<KeyFrame*> vpCandidateKFs(mspKeyFrames.begin(), mspKeyFrames.end());
+    // cout << endl << "B.B The number of candidate keyframes: " << vpCandidateKFs.size() << ". Press Enter..."; 
+    // cin.get();
+    // Jusqu'ici
 
     if(vpCandidateKFs.empty()) {
         Verbose::PrintMess("There are not candidates", Verbose::VERBOSITY_NORMAL);
@@ -3884,36 +4047,74 @@ bool Tracking::Relocalization()
 
     // We perform first an ORB matching with each candidate
     // If enough matches are found we setup a PnP solver
-    ORBmatcher matcher(0.75,true);
+    
+    // #ifdef USE_SELM_EXTRACTOR
+    //     SELMSLAM::BBLGMatcher bbmatcher;
+    // #else
+        ORBmatcher matcher(0.75, true);
+    // #endif
 
+    // B.B The PnP algorithm is a method of finding the pose of a camera in 3D space from a set of known 3D-2D point correspondences.
     vector<MLPnPsolver*> vpMLPnPsolvers;
     vpMLPnPsolvers.resize(nKFs);
 
     vector<vector<MapPoint*> > vvpMapPointMatches;
     vvpMapPointMatches.resize(nKFs);
 
+
+    // B.B to keep track of which candidate keyframes have been discarded due to insufficient matching.
     vector<bool> vbDiscarded;
     vbDiscarded.resize(nKFs);
 
-    int nCandidates=0;
+    // B.B to keep track of the number of candidate keyframes that are still being considered for relocalization.
+    int nCandidates = 0;
 
-    for(int i=0; i<nKFs; i++)
-    {
+    // B.B performs an LightGlue/ORB matching and then attempt to find a camera pose using the PnP algorithm.
+    // B.B The results of the matching are stored in the vvpMapPointMatches[i] vector.
+    for(int i = 0; i < nKFs; i++) {
         KeyFrame* pKF = vpCandidateKFs[i];
-        if(pKF->isBad())
+        if(pKF->isBad()) {
             vbDiscarded[i] = true;
-        else
-        {
-            int nmatches = matcher.SearchByBoW(pKF,mCurrentFrame,vvpMapPointMatches[i]);
-            if(nmatches<15)
-            {
+        } else {
+
+            // #ifdef USE_SELM_EXTRACTOR
+            //     int nmatches = bbmatcher.SearchByLG(pKF, mCurrentFrame, vvpMapPointMatches[i]);
+            // #else
+                int nmatches = matcher.SearchByBoW(pKF, mCurrentFrame, vvpMapPointMatches[i]);
+            // #endif
+            
+            if(nmatches < 15) {
                 vbDiscarded[i] = true;
                 continue;
-            }
-            else
-            {
-                MLPnPsolver* pSolver = new MLPnPsolver(mCurrentFrame,vvpMapPointMatches[i]);
-                pSolver->SetRansacParameters(0.99,10,300,6,0.5,5.991);  //This solver needs at least 6 points
+            } else {
+                MLPnPsolver* pSolver = new MLPnPsolver(mCurrentFrame, vvpMapPointMatches[i]);
+                /**
+                 * B.B
+                 * Probability of inliers: 0.99
+                 * the desired probability that the inliers found by the RANSAC algorithm will actually be inliers. 
+                 * A higher probability will result in more robust results, but it will also require more iterations.
+                 * 
+                 * Initial number of points: 10
+                 * the minimum number of points that must be inliers for the RANSAC algorithm to consider a model to be inliers. 
+                 * A lower number of points will result in faster results, but it may also result in more outliers.
+                 * 
+                 * Maximum number of iterations: 300
+                 * the maximum number of iterations that the RANSAC algorithm will run. 
+                 * If the algorithm does not find a model with enough inliers after this number of iterations, it will fail.
+                 * 
+                 * Inlier threshold: 6
+                 * the threshold that is used to determine if a point is considered to be an inlier. 
+                 * A lower threshold will result in more inliers, but it may also result in more false positives.
+                 * 
+                 * Scaling: 0.5
+                 * the scaling factor that is used to scale the input points before the RANSAC algorithm is run. 
+                 * This can help to improve the robustness of the algorithm in some cases.
+                 * 
+                 * Confidence: 5.991
+                 *  the confidence level for the RANSAC algorithm. 
+                 * A higher confidence level will result in more robust results, but it may also result in more iterations.
+                */
+                pSolver->SetRansacParameters(0.99, 10, 300, 6, 0.5, 5.991);  //This solver needs at least 6 points
                 vpMLPnPsolvers[i] = pSolver;
                 nCandidates++;
             }
@@ -3923,14 +4124,18 @@ bool Tracking::Relocalization()
     // Alternatively perform some iterations of P4P RANSAC
     // Until we found a camera pose supported by enough inliers
     bool bMatch = false;
-    ORBmatcher matcher2(0.9,true);
 
-    while(nCandidates>0 && !bMatch)
-    {
-        for(int i=0; i<nKFs; i++)
-        {
-            if(vbDiscarded[i])
+    // #ifdef USE_SELM_EXTRACTOR
+    //     SELMSLAM::BBLGMatcher bbmatcher2;
+    // #else
+        ORBmatcher matcher2(0.9, true);
+    // #endif
+
+    while(nCandidates > 0 && !bMatch) {
+        for(int i = 0; i < nKFs; i++) {
+            if(vbDiscarded[i]){
                 continue;
+            }
 
             // Perform 5 Ransac Iterations
             vector<bool> vbInliers;
@@ -3939,18 +4144,16 @@ bool Tracking::Relocalization()
 
             MLPnPsolver* pSolver = vpMLPnPsolvers[i];
             Eigen::Matrix4f eigTcw;
-            bool bTcw = pSolver->iterate(5,bNoMore,vbInliers,nInliers, eigTcw);
+            bool bTcw = pSolver->iterate(5, bNoMore, vbInliers, nInliers, eigTcw);
 
             // If Ransac reachs max. iterations discard keyframe
-            if(bNoMore)
-            {
-                vbDiscarded[i]=true;
+            if(bNoMore) {
+                vbDiscarded[i] = true;
                 nCandidates--;
             }
 
             // If a Camera Pose is computed, optimize
-            if(bTcw)
-            {
+            if(bTcw) {
                 Sophus::SE3f Tcw(eigTcw);
                 mCurrentFrame.SetPose(Tcw);
                 // Tcw.copyTo(mCurrentFrame.mTcw);
@@ -3959,77 +4162,89 @@ bool Tracking::Relocalization()
 
                 const int np = vbInliers.size();
 
-                for(int j=0; j<np; j++)
-                {
-                    if(vbInliers[j])
-                    {
-                        mCurrentFrame.mvpMapPoints[j]=vvpMapPointMatches[i][j];
+                for(int j = 0; j < np; j++) {
+                    if(vbInliers[j]) {
+                        mCurrentFrame.mvpMapPoints[j] = vvpMapPointMatches[i][j];
                         sFound.insert(vvpMapPointMatches[i][j]);
+                    } else {
+                        mCurrentFrame.mvpMapPoints[j] = NULL;
                     }
-                    else
-                        mCurrentFrame.mvpMapPoints[j]=NULL;
                 }
 
                 int nGood = Optimizer::PoseOptimization(&mCurrentFrame);
 
-                if(nGood<10)
+                if(nGood < 10) {
                     continue;
+                }
 
-                for(int io =0; io<mCurrentFrame.N; io++)
-                    if(mCurrentFrame.mvbOutlier[io])
-                        mCurrentFrame.mvpMapPoints[io]=static_cast<MapPoint*>(NULL);
+                for(int io = 0; io < mCurrentFrame.N; io++) {
+                    if(mCurrentFrame.mvbOutlier[io]) {
+                        mCurrentFrame.mvpMapPoints[io] = static_cast<MapPoint*>(NULL);
+                    }
+                }
 
                 // If few inliers, search by projection in a coarse window and optimize again
-                if(nGood<50)
-                {
-                    int nadditional =matcher2.SearchByProjection(mCurrentFrame,vpCandidateKFs[i],sFound,10,100);
+                if(nGood < 50) {
 
-                    if(nadditional+nGood>=50)
-                    {
+                    // #ifdef USE_SELM_EXTRACTOR
+                    //     int nadditional = 0;
+                    //     cout << endl << "B.B In Tracking::Relocalization. Since nGood < 50, SearchByProjection sould be called. Press Enter ..."; 
+                    //     // cin.get();
+                    // #else
+                        int nadditional = matcher2.SearchByProjection(mCurrentFrame, vpCandidateKFs[i], sFound, 10, 100);
+                    // #endif
+
+                    if(nadditional + nGood >= 50) {
                         nGood = Optimizer::PoseOptimization(&mCurrentFrame);
 
                         // If many inliers but still not enough, search by projection again in a narrower window
                         // the camera has been already optimized with many points
-                        if(nGood>30 && nGood<50)
-                        {
+                        if(nGood > 30 && nGood < 50) {
                             sFound.clear();
-                            for(int ip =0; ip<mCurrentFrame.N; ip++)
-                                if(mCurrentFrame.mvpMapPoints[ip])
+                            for(int ip = 0; ip < mCurrentFrame.N; ip++) {
+                                if(mCurrentFrame.mvpMapPoints[ip]) {
                                     sFound.insert(mCurrentFrame.mvpMapPoints[ip]);
-                            nadditional =matcher2.SearchByProjection(mCurrentFrame,vpCandidateKFs[i],sFound,3,64);
+                                }
+                            }
+
+                            // #ifdef USE_SELM_EXTRACTOR
+                            //     cout << endl << "B.B In Tracking::Relocalization. Since nGood > 30 && nGood < 50, SearchByProjection sould be called. Press Enter ..."; 
+                            //     // cin.get();
+                            // #else
+                                nadditional = matcher2.SearchByProjection(mCurrentFrame, vpCandidateKFs[i], sFound, 3, 64);
+                            // #endif
 
                             // Final optimization
-                            if(nGood+nadditional>=50)
-                            {
+                            if(nGood + nadditional >= 50) {
                                 nGood = Optimizer::PoseOptimization(&mCurrentFrame);
 
-                                for(int io =0; io<mCurrentFrame.N; io++)
-                                    if(mCurrentFrame.mvbOutlier[io])
-                                        mCurrentFrame.mvpMapPoints[io]=NULL;
+                                for(int io = 0; io < mCurrentFrame.N; io++) {
+                                    if(mCurrentFrame.mvbOutlier[io]) {
+                                        mCurrentFrame.mvpMapPoints[io] = NULL;
+                                    }
+                                }
                             }
                         }
                     }
-                }
+                } // B.B end of (nGood < 50) 
 
 
                 // If the pose is supported by enough inliers stop ransacs and continue
-                if(nGood>=50)
-                {
+                if(nGood >= 50) {
                     bMatch = true;
                     break;
                 }
-            }
-        }
-    }
+            } // B.B end of If a Camera Pose is computed, optimize
+        } // end of for loop on nKFs
+    } // B.B end of while(nCandidates > 0 && !bMatch) 
 
-    if(!bMatch)
-    {
+    if(!bMatch) {
         return false;
-    }
-    else
-    {
+    } else {
         mnLastRelocFrameId = mCurrentFrame.mnId;
         cout << "Relocalized!!" << endl;
+        cout << "B.B Press Enter..."; 
+        // cin.get();
         return true;
     }
 

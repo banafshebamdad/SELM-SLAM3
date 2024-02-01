@@ -238,7 +238,7 @@ protected:
 
 
     // To (de)activate LC
-    bool mbActiveLC = true;
+    bool mbActiveLC = true; // B.B The default value was 'true,' it was set to 'false' by Banafshe Bamdad, although it does not work.
 
 #ifdef REGISTER_LOOP
     string mstrFolderLoop;

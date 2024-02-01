@@ -758,8 +758,19 @@ void KeyFrameDatabase::DetectNBestCandidates(KeyFrame *pKF, vector<KeyFrame*> &v
 }
 
 
-vector<KeyFrame*> KeyFrameDatabase::DetectRelocalizationCandidates(Frame *F, Map* pMap)
-{
+/**
+ * B.B a big @todo Mi jan 10, 2024 
+ * ORB-SLAM3 computes DBoW for each incoming frame and stores this information in the frame data structure. 
+ * During the relocalization process, when ORB-SLAM3 searches for candidate KeyFrames, it compares the current frame's words 
+ * with those of KeyFrames and attempts to retrieve more similar KeyFrames to the current frame. 
+ * In my effort to replace DBoW in SELM-SLAM3, I am seeking the most suitable learning-based solution for image retrieval 
+ * that is sufficiently accurate for my application and can run in real-time. 
+ * Currently, I identify candidate KeyFrames by finding matches between KeyFrames and the current frame using LightGlue. 
+ * However, I plan to replace this with a more advanced solution in the future.
+*/
+// B.B returns a vector of KeyFrame objects that are considered to be good candidates for relocalization.
+vector<KeyFrame*> KeyFrameDatabase::DetectRelocalizationCandidates(Frame *F, Map* pMap) {
+
     list<KeyFrame*> lKFsSharingWords;
 
     // Search all keyframes that share a word with current frame
@@ -768,104 +779,114 @@ vector<KeyFrame*> KeyFrameDatabase::DetectRelocalizationCandidates(Frame *F, Map
 #ifdef USE_DBOW2
         for(DBoW2::BowVector::const_iterator vit=F->mBowVec.begin(), vend=F->mBowVec.end(); vit != vend; vit++)
 #else
-        for(DBoW3::BowVector::const_iterator vit=F->mBowVec.begin(), vend=F->mBowVec.end(); vit != vend; vit++)
+        for(DBoW3::BowVector::const_iterator vit = F->mBowVec.begin(), vend = F->mBowVec.end(); vit != vend; vit++)
 #endif
         {
-            list<KeyFrame*> &lKFs =   mvInvertedFile[vit->first];
+            list<KeyFrame*> &lKFs = mvInvertedFile[vit->first];
 
-            for(list<KeyFrame*>::iterator lit=lKFs.begin(), lend= lKFs.end(); lit!=lend; lit++)
-            {
+            for(list<KeyFrame*>::iterator lit = lKFs.begin(), lend = lKFs.end(); lit!=lend; lit++) {
                 KeyFrame* pKFi=*lit;
-                if(pKFi->mnRelocQuery!=F->mnId)
-                {
-                    pKFi->mnRelocWords=0;
-                    pKFi->mnRelocQuery=F->mnId;
-                    lKFsSharingWords.push_back(pKFi);
+
+                // B.B checks if the KeyFrame object (pKFi) has not already been processed for the current frame (F)
+                if(pKFi->mnRelocQuery != F->mnId) {
+                    pKFi->mnRelocWords = 0; // B.B resets the number of words that the current KeyFrame object pKFi shares with the current frame F to zero.
+                    pKFi->mnRelocQuery = F->mnId; // B.B sets the query ID of the KeyFrame object to the ID of the current frame.
+                    lKFsSharingWords.push_back(pKFi); // B.B adds the KeyFrame object to the list of KeyFrame objects that share words with the current frame.
                 }
-                pKFi->mnRelocWords++;
+                pKFi->mnRelocWords++; // B.B increments the number of words that the KeyFrame object shares with the current frame by one.
             }
         }
     }
-    if(lKFsSharingWords.empty())
+    if(lKFsSharingWords.empty()) {
         return vector<KeyFrame*>();
-
-    // Only compare against those keyframes that share enough words
-    int maxCommonWords=0;
-    for(list<KeyFrame*>::iterator lit=lKFsSharingWords.begin(), lend= lKFsSharingWords.end(); lit!=lend; lit++)
-    {
-        if((*lit)->mnRelocWords>maxCommonWords)
-            maxCommonWords=(*lit)->mnRelocWords;
     }
 
-    int minCommonWords = maxCommonWords*0.8f;
-
-    list<pair<float,KeyFrame*> > lScoreAndMatch;
-
-    int nscores=0;
-
-    // Compute similarity score.
-    for(list<KeyFrame*>::iterator lit=lKFsSharingWords.begin(), lend= lKFsSharingWords.end(); lit!=lend; lit++)
-    {
-        KeyFrame* pKFi = *lit;
-
-        if(pKFi->mnRelocWords>minCommonWords)
-        {
-            nscores++;
-            float si = mpVoc->score(F->mBowVec,pKFi->mBowVec);
-            pKFi->mRelocScore=si;
-            lScoreAndMatch.push_back(make_pair(si,pKFi));
+    // Only compare against those keyframes that share enough words
+    int maxCommonWords = 0;
+    for(list<KeyFrame*>::iterator lit = lKFsSharingWords.begin(), lend= lKFsSharingWords.end(); lit!=lend; lit++) {
+        if((*lit)->mnRelocWords > maxCommonWords){
+            maxCommonWords = (*lit)->mnRelocWords;
         }
     }
 
-    if(lScoreAndMatch.empty())
-        return vector<KeyFrame*>();
+    int minCommonWords = maxCommonWords * 0.8f;
 
-    list<pair<float,KeyFrame*> > lAccScoreAndMatch;
-    float bestAccScore = 0;
+    list<pair<float, KeyFrame*> > lScoreAndMatch; // B.B to store pairs of similarity scores and corresponding KeyFrame objects.
+
+    int nscores = 0; // B.B to track the number of KeyFrame objects that have been added to the lScoreAndMatch list.
+
+    // Compute similarity score.
+    for(list<KeyFrame*>::iterator lit = lKFsSharingWords.begin(), lend = lKFsSharingWords.end(); lit != lend; lit++) {
+        KeyFrame* pKFi = *lit;
+
+        if(pKFi->mnRelocWords > minCommonWords) { // B.B checks if the KeyFrame object meets the minimum-word-sharing requirement.
+            nscores++;
+            
+            // B.B calculates the similarity score between the current frame and the KeyFrame object using the Vocabulary object mpVoc.
+            float si = mpVoc->score(F->mBowVec, pKFi->mBowVec); 
+            pKFi->mRelocScore = si; // B.B sets the relocalization score of the KeyFrame object to the calculated similarity score.
+            lScoreAndMatch.push_back(make_pair(si, pKFi));
+        }
+    }
+
+    if(lScoreAndMatch.empty()){
+        return vector<KeyFrame*>();
+    }
+
+    // B.B to store pairs of accumulated similarity scores and corresponding KF
+    list<pair<float, KeyFrame*> > lAccScoreAndMatch;
+    float bestAccScore = 0; // B.B to store the maximum accumulated similarity score.
 
     // Lets now accumulate score by covisibility
-    for(list<pair<float,KeyFrame*> >::iterator it=lScoreAndMatch.begin(), itend=lScoreAndMatch.end(); it!=itend; it++)
-    {
+    for(list<pair<float, KeyFrame*> >::iterator it = lScoreAndMatch.begin(), itend = lScoreAndMatch.end(); it != itend; it++) {
         KeyFrame* pKFi = it->second;
+
+        // B.B retrieves the 10 best covisible KeyFrame objects from the current KeyFrame object pKFi
         vector<KeyFrame*> vpNeighs = pKFi->GetBestCovisibilityKeyFrames(10);
 
         float bestScore = it->first;
         float accScore = bestScore;
-        KeyFrame* pBestKF = pKFi;
-        for(vector<KeyFrame*>::iterator vit=vpNeighs.begin(), vend=vpNeighs.end(); vit!=vend; vit++)
-        {
+        KeyFrame* pBestKF = pKFi; // B.B be used to track the KeyFrame object with the highest accumulated similarity score.
+        for(vector<KeyFrame*>::iterator vit = vpNeighs.begin(), vend = vpNeighs.end(); vit!=vend; vit++) {
             KeyFrame* pKF2 = *vit;
-            if(pKF2->mnRelocQuery!=F->mnId)
+            
+            if(pKF2->mnRelocQuery != F->mnId){
                 continue;
+            }
 
-            accScore+=pKF2->mRelocScore;
-            if(pKF2->mRelocScore>bestScore)
-            {
-                pBestKF=pKF2;
+            // B.B accumulates the similarity score of the covisible KeyFrame object to the accumulated similarity score.
+            accScore += pKF2->mRelocScore;
+            if(pKF2->mRelocScore > bestScore) {
+                pBestKF = pKF2;
                 bestScore = pKF2->mRelocScore;
             }
 
         }
-        lAccScoreAndMatch.push_back(make_pair(accScore,pBestKF));
-        if(accScore>bestAccScore)
-            bestAccScore=accScore;
-    }
 
-    // Return all those keyframes with a score higher than 0.75*bestScore
-    float minScoreToRetain = 0.75f*bestAccScore;
+        lAccScoreAndMatch.push_back(make_pair(accScore, pBestKF));
+
+        // B.B checks if the accumulated similarity score for the KeyFrame object pKFi is higher than the current bestAccScore.
+        if(accScore > bestAccScore){
+            bestAccScore = accScore;
+        }
+    } // B.B end of for loop 
+
+    // Return all those keyframes with a score higher than 0.75 * bestScore
+    float minScoreToRetain = 0.75f * bestAccScore;
+
+    // B.B to keep track of KeyFrame objects that have already been added to the final list of relocalization candidates. 
+    // B.B This is to avoid adding the same KeyFrame object multiple times.
     set<KeyFrame*> spAlreadyAddedKF;
     vector<KeyFrame*> vpRelocCandidates;
     vpRelocCandidates.reserve(lAccScoreAndMatch.size());
-    for(list<pair<float,KeyFrame*> >::iterator it=lAccScoreAndMatch.begin(), itend=lAccScoreAndMatch.end(); it!=itend; it++)
-    {
+    for(list<pair<float,KeyFrame*> >::iterator it = lAccScoreAndMatch.begin(), itend = lAccScoreAndMatch.end(); it != itend; it++) {
         const float &si = it->first;
-        if(si>minScoreToRetain)
-        {
+        if(si > minScoreToRetain) {
             KeyFrame* pKFi = it->second;
-            if (pKFi->GetMap() != pMap)
+            if (pKFi->GetMap() != pMap){
                 continue;
-            if(!spAlreadyAddedKF.count(pKFi))
-            {
+            }
+            if(!spAlreadyAddedKF.count(pKFi)) {
                 vpRelocCandidates.push_back(pKFi);
                 spAlreadyAddedKF.insert(pKFi);
             }

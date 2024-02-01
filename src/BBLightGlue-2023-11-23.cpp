@@ -114,7 +114,7 @@ namespace SELMSLAM {
         BBLightGlue::perform_match(features1, features2, matches_info);
         TOC
         cout << "B.B After performing BBLightGlue::perform_match for Ref.KF and Cur. Frame. Press Enter...";
-        cin.get();
+        // cin.get();
 
         // to store unique pairs of matched keypoints. This set will be used to ensure that duplicates are not included in the final matches.
         std::set<std::pair<int, int> > matches;
@@ -188,7 +188,7 @@ namespace SELMSLAM {
         cout << "\t# of MapPoints: " << vpMapPoints.size() << endl;
         cout << "\t# of vMPKeypoint: " << vMPKeypoint.size() << endl;
         cout << "\tDescriptor dimension: (" << MPDescriptors.rows << ", " << MPDescriptors.cols << ")";
-        cin.get();
+        // cin.get();
 
         // current frame
         SELMSLAM::ImageFeatures features2;
