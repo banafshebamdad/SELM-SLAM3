@@ -12,9 +12,4 @@ We are currently uploading and setting up the GitHub repository. Stay tuned for 
 M. Bamdad, H.-P. Hutter, and A. Darvishy. "Deep Learning-Powered Visual SLAM Aimed at Assisting Visually Impaired Navigation." 20th International Conference on Computer Vision Theory and Applications (2025).
 
 
-### Citing:
-**If you use SUPERSLAM3 in an academic work, please cite:**
-```
-M. Bamdad, H.-P. Hutter, and A. Darvishy. "Deep Learning-Powered Visual SLAM Aimed at Assisting Visually Impaired Navigation." 20th International Conference on Computer Vision Theory and Applications (2025).
-```
-Under construction
+# Under construction ...
