@@ -90,8 +90,7 @@ MapPoint::MapPoint(const Eigen::Vector3f &Pos, Map* pMap, Frame* pFrame, const i
     Eigen::Vector3f Ow;
     if(pFrame -> Nleft == -1 || idxF < pFrame -> Nleft){
         Ow = pFrame->GetCameraCenter();
-    }
-    else{
+    } else {
         Eigen::Matrix3f Rwl = pFrame->GetRwc();
         Eigen::Vector3f tlr = pFrame->GetRelativePoseTlr().translation();
         Eigen::Vector3f twl = pFrame->GetOw();
@@ -402,7 +401,7 @@ void MapPoint::ComputeDistinctiveDescriptors() {
             // B.B computes the distances between all pairs of descriptors
             // Added by Banafshe Bamdad
             #ifdef USE_SELM_EXTRACTOR
-                int distij = BBLGMatcher::DescriptorDistance(vDescriptors[i], vDescriptors[j]);
+                float distij = BBLGMatcher::DescriptorDistance(vDescriptors[i], vDescriptors[j]);
             #else
                 int distij = ORBmatcher::DescriptorDistance(vDescriptors[i], vDescriptors[j]); // B.B !!! ACHTUNG ACHTUNG !!!
             #endif
@@ -415,6 +414,8 @@ void MapPoint::ComputeDistinctiveDescriptors() {
     // Take the descriptor with least median distance to the rest
     // B.B to find a distinctive descriptor that is different from the others.
     // B.B The distance represents how similar or dissimilar two descriptors are.
+
+    // @todo B.B change the type of the BestMedian, vDists, and median to float for SELM-SLAM3
     int BestMedian = INT_MAX;
     int BestIdx = 0;
 
@@ -462,7 +463,8 @@ bool MapPoint::IsInKeyFrame(KeyFrame *pKF)
 
 /**
  * B.B
- * computes the normal vector and depth information (mfMinDistance) and mfMaxDistance) distances from the map point to the camera center) for a map point based on its observations in various keyframes
+ * computes the normal vector and depth information (mfMinDistance) and mfMaxDistance) distances from the map point to the camera center) 
+ * for a map point based on its observations in various keyframes
  * Octave levels are often used in scale-invariant feature detectors and descriptors to represent the scale at which a feature is detected.
 */
 void MapPoint::UpdateNormalAndDepth() {
@@ -579,6 +581,7 @@ void MapPoint::UpdateNormalAndDepth() {
         // B.B computes the maximum distance from the map point to the reference keyframe's camera center
         mfMaxDistance = dist * levelScaleFactor;
 
+        // B.B @todo check CrowdPilot-SLAM for this line
         //  B.B computes the minimum distance based on the maximum distance and the scale factor of the lowest scale level.
         mfMinDistance = mfMaxDistance / pRefKF->mvScaleFactors[nLevels - 1]; // B.B the scale factor of the lowest scale level. nLevels - 1: the last level in pyramid
 

@@ -23,6 +23,8 @@
 #include "Pinhole.h"
 #include "KannalaBrandt8.h"
 
+#include "BBLogger.hpp" // BB
+
 namespace ORB_SLAM3
 {
 
@@ -100,8 +102,7 @@ void Atlas::SetViewer(Viewer* pViewer)
     mHasViewer = true;
 }
 
-void Atlas::AddKeyFrame(KeyFrame* pKF)
-{
+void Atlas::AddKeyFrame(KeyFrame* pKF) {
     Map* pMapKF = pKF->GetMap();
     pMapKF->AddKeyFrame(pKF);
 }

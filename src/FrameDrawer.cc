@@ -370,22 +370,33 @@ void FrameDrawer::DrawTextInfo(cv::Mat &im, int nState, cv::Mat &imText) {
         //  ", FrameID: " << mCurrentFrame.mnId is added by Banafshe Bamdad
         s << "Maps: " << nMaps << ", KFs: " << nKFs << ", MPs: " << nMPs << ", Matches: " << mnTracked << ", FrameID: " << mCurrentFrame.mnId;
 
-        std::ofstream BBLogFile_features("/home/banafshe/SUPERSLAM3/my_logs/Banafshe_num_matches.log", std::ios::app);
+        std::string BBLogFile_features_Path = std::string(BBLOGFILE_PATH) + "BB_num_matches.log";
+        std::ofstream BBLogFile_features(BBLogFile_features_Path, std::ios::app);
         if (BBLogFile_features.is_open()) {
             BBLogFile_features << endl << "FrameId: " << mCurrentFrame.mnId << "\t#matches: " << mnTracked;
             BBLogFile_features.close();
         }
 
-        std::ofstream BBLogFile_KFs("/home/banafshe/SUPERSLAM3/my_logs/Banafshe_num_KFs.log", std::ios::app);
+        std::string BBLogFile_KFs_Path = std::string(BBLOGFILE_PATH) + "BB_num_KFs.log";
+        std::ofstream BBLogFile_KFs(BBLogFile_KFs_Path, std::ios::app);
         if (BBLogFile_KFs.is_open()) {
             BBLogFile_KFs << endl << "FrameId: " << mCurrentFrame.mnId << "\t#KFs: " << nKFs;
             BBLogFile_KFs.close();
         }
 
-        std::ofstream BBLogFile_MPs("/home/banafshe/SUPERSLAM3/my_logs/Banafshe_num_MPs.log", std::ios::app);
+        std::string BBLogFile_MPs_Path = std::string(BBLOGFILE_PATH) + "BB_num_MPs.log";
+        std::ofstream BBLogFile_MPs(BBLogFile_MPs_Path, std::ios::app);
         if (BBLogFile_MPs.is_open()) {
             BBLogFile_MPs << endl << "FrameId: " << mCurrentFrame.mnId << "\t#MPs: " << nMPs;
             BBLogFile_MPs.close();
+        }
+
+        // B.B all in one
+        std::string bbLogFilePath = std::string(BBLOGFILE_PATH) + "BB_all_in_one_initialization.log";
+        std::ofstream BBLogFile(bbLogFilePath, std::ios::app);
+        if (BBLogFile.is_open()) {
+            BBLogFile << endl << "FrameID: " << mCurrentFrame.mnId << "\t# Maps: " << nMaps << "\t# KFs: " << nKFs << "\t# MPs: " << nMPs << "\t# Matches: " << mnTracked;
+            BBLogFile.close();
         }
 
         

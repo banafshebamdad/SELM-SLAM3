@@ -44,8 +44,13 @@ Eigen::Matrix3f GeometricTools::ComputeF12(KeyFrame* &pKF1, KeyFrame* &pKF2)
     return K1.transpose().inverse() * tc1c2x * Rc1c2 * K2.inverse();
 }
 
-bool GeometricTools::Triangulate(Eigen::Vector3f &x_c1, Eigen::Vector3f &x_c2,Eigen::Matrix<float,3,4> &Tc1w ,Eigen::Matrix<float,3,4> &Tc2w , Eigen::Vector3f &x3D)
-{
+/**
+ * B.B
+ * Solves for a point in 3D space that corresponds to two given points in two different camera views, 
+ * using their respective projection matrices. 
+ * The SVD is used to solve this system in a way that minimizes the error, making it robust to noise in the input data.
+*/
+bool GeometricTools::Triangulate(Eigen::Vector3f &x_c1, Eigen::Vector3f &x_c2,Eigen::Matrix<float,3,4> &Tc1w ,Eigen::Matrix<float,3,4> &Tc2w , Eigen::Vector3f &x3D) {
     Eigen::Matrix4f A;
     A.block<1,4>(0,0) = x_c1(0) * Tc1w.block<1,4>(2,0) - Tc1w.block<1,4>(0,0);
     A.block<1,4>(1,0) = x_c1(1) * Tc1w.block<1,4>(2,0) - Tc1w.block<1,4>(1,0);
@@ -56,11 +61,11 @@ bool GeometricTools::Triangulate(Eigen::Vector3f &x_c1, Eigen::Vector3f &x_c2,Ei
 
     Eigen::Vector4f x3Dh = svd.matrixV().col(3);
 
-    if(x3Dh(3)==0)
+    if(x3Dh(3) == 0)
         return false;
 
     // Euclidean coordinates
-    x3D = x3Dh.head(3)/x3Dh(3);
+    x3D = x3Dh.head(3) / x3Dh(3);
 
     return true;
 }

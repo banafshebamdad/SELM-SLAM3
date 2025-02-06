@@ -86,6 +86,9 @@ public:
     // Constructor for Monocular cameras.
     Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor* extractor,ORBVocabulary* voc, GeometricCamera* pCamera, cv::Mat &distCoef, const float &bf, const float &thDepth, Frame* pPrevF = static_cast<Frame*>(NULL), const IMU::Calib &ImuCalib = IMU::Calib());
 
+    // Added by Banafshe bamdad. Constructor for Monocular cameras with my implementation of SuperPoint and LightGlue matcher
+    Frame(const cv::Mat &imGray, const double &timeStamp, SELMSLAM::BBSPExtractor* extractor,ORBVocabulary* voc, GeometricCamera* pCamera, cv::Mat &distCoef, const float &bf, const float &thDepth, Frame* pPrevF = static_cast<Frame*>(NULL), const IMU::Calib &ImuCalib = IMU::Calib());
+
     // Destructor
     // ~Frame();
 

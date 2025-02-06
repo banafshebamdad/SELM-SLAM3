@@ -1868,7 +1868,7 @@ void Tracking::Track() {
     if(!pCurrentMap) {
         cout << "ERROR: There is not an active map in the atlas" << endl;
         cout << "B.B Press Enter ...";
-        cin.get();
+        //cin.get();
     // } else {
     //     cout << endl << "B.B There is active map(s) in the Atlas..." << endl;
     } 
@@ -2655,7 +2655,7 @@ void Tracking::StereoInitialization() {
 
         cout << endl << "B.B In Tracking::StereoInitialization(). End of the method (mState = OK)? " << (mState == OK) << endl;
         cout << "B.B Press Enter...";
-        cin.get();
+        //cin.get();
         // cin.get();
     } else { // B.B 
         cout << endl << "B.B In Tracking::StereoInitialization(), Malheureusement, le nombre de Features extraites est mois de 500." << endl;

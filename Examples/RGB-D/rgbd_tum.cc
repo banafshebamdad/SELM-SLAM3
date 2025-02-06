@@ -44,7 +44,11 @@
 // ./Examples/RGB-D/rgbd_tum Vocabulary/ORBvoc.txt Examples/RGB-D/TUM1.yaml /media/banafshe/Banafshe_2TB/Datasets/TUM/Handheld_SLAM/rgbd_dataset_freiburg1_desk2 /media/banafshe/Banafshe_2TB/Datasets/TUM/Handheld_SLAM/rgbd_dataset_freiburg1_desk2/associations.txt
 // ./Examples/RGB-D/rgbd_tum Vocabulary/ORBvoc.txt Examples/RGB-D/TUM1.yaml /media/banafshe/Banafshe_2TB/Datasets/TUM/Handheld_SLAM/rgbd_dataset_freiburg1_floor /media/banafshe/Banafshe_2TB/Datasets/TUM/Handheld_SLAM/rgbd_dataset_freiburg1_floor/associations.txt
 // ./Examples/RGB-D/rgbd_tum Vocabulary/ORBvoc.txt Examples/RGB-D/TUM1.yaml /media/banafshe/Banafshe_2TB/Datasets/TUM/Handheld_SLAM/rgbd_dataset_freiburg1_room /media/banafshe/Banafshe_2TB/Datasets/TUM/Handheld_SLAM/rgbd_dataset_freiburg1_room/associations.txt
+
 // ./Examples/RGB-D/rgbd_tum Vocabulary/ORBvoc.txt Examples/RGB-D/TUM2.yaml /media/banafshe/Banafshe_2TB/Datasets/TUM/Handheld_SLAM/rgbd_dataset_freiburg2_360_kidnap /media/banafshe/Banafshe_2TB/Datasets/TUM/Handheld_SLAM/rgbd_dataset_freiburg2_360_kidnap/associations.txt
+// ./Examples/RGB-D/rgbd_tum Vocabulary/ORBvoc.txt Examples/RGB-D/TUM2.yaml /media/banafshe/Banafshe_2TB/Datasets/TUM/Handheld_SLAM/rgbd_dataset_freiburg2_360_hemisphere /media/banafshe/Banafshe_2TB/Datasets/TUM/Handheld_SLAM/rgbd_dataset_freiburg2_360_hemisphere/associations.txt
+
+// ./Examples/RGB-D/rgbd_tum Vocabulary/ORBvoc.txt Examples/RGB-D/TUM3.yaml /media/banafshe/Banafshe_2TB/Datasets/TUM/Handheld_SLAM/rgbd_dataset_freiburg3_long_office_household /media/banafshe/Banafshe_2TB/Datasets/TUM/Handheld_SLAM/rgbd_dataset_freiburg3_long_office_household/associations.txt
 
 // 3D Object Reconstruction
 // ./Examples/RGB-D/rgbd_tum Vocabulary/ORBvoc.txt Examples/RGB-D/TUM1.yaml /media/banafshe/Banafshe_2TB/Datasets/TUM/3D_Object_Reconstruction/rgbd_dataset_freiburg1_plant /media/banafshe/Banafshe_2TB/Datasets/TUM/3D_Object_Reconstruction/rgbd_dataset_freiburg1_plant/associations.txt
@@ -74,6 +78,7 @@
 #include <codecvt>
 #include "BBLightGlue.hpp"
 #include "BBSuperPoint.hpp"
+#include "BBLogger.hpp"
 
 // Added by banafshe Bamdad
 // #define USE_ORBFEATURES 1
@@ -93,6 +98,9 @@ void LoadImages(const string &strAssociationFilename, vector<string> &vstrImageF
 float matchThresh = 0.0f;
 
 int main(int argc, char **argv) {
+
+    BBLogger::setFilename("/home/banafshe/SUPERSLAM3/my_logs/BB_monitoringBBLogger.log");
+
     if(argc < 5) {
         cerr << endl << "Usage: ./rgbd_tum path_to_vocabulary path_to_settings path_to_sequence path_to_association" << endl;
         return 1;
@@ -251,11 +259,11 @@ int main(int argc, char **argv) {
             cv::resize(imD, imD, cv::Size(width, height));
         }
 
-#ifdef COMPILEDWITHC11
-        std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
-#else
-        std::chrono::monotonic_clock::time_point t1 = std::chrono::monotonic_clock::now();
-#endif
+        #ifdef COMPILEDWITHC11
+                std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+        #else
+                std::chrono::monotonic_clock::time_point t1 = std::chrono::monotonic_clock::now();
+        #endif
 
         // Pass the image to the SLAM system
         // B.B @todo Fr. Okt. 20 08:26 process the output of this method which is Sophus::SE3f Tcw
@@ -296,8 +304,8 @@ int main(int argc, char **argv) {
     cout << "mean tracking time: " << totaltime / nImages << endl;
 
     // Save camera trajectory
-    SLAM.SaveTrajectoryTUM("CameraTrajectory.txt");
-    SLAM.SaveKeyFrameTrajectoryTUM("KeyFrameTrajectory.txt");   
+    SLAM.SaveTrajectoryTUM("CameraTrajectory_RGBD.txt");
+    SLAM.SaveKeyFrameTrajectoryTUM("KeyFrameTrajectory_RGBD.txt");   
 
     return 0;
 }

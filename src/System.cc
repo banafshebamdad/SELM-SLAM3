@@ -40,6 +40,7 @@
 #include <iostream>
 #include <fstream>
 #include <list>
+#include "BBLogger.hpp"
 
 inline bool check_file_existance (const std::string& name) {
   struct stat buffer;   
@@ -66,11 +67,11 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
 
     cout << "Input sensor was set to: ";
 
-    if(mSensor==MONOCULAR)
+    if(mSensor == MONOCULAR)
         cout << "Monocular" << endl;
     else if(mSensor==STEREO)
         cout << "Stereo" << endl;
-    else if(mSensor==RGBD)
+    else if(mSensor == RGBD)
         cout << "RGB-D" << endl;
     else if(mSensor==IMU_MONOCULAR)
         cout << "Monocular-Inertial" << endl;
@@ -135,37 +136,33 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     if(mStrLoadAtlasFromFile.empty()) {
         //Load ORB Vocabulary
         cout << endl << "Loading ORB Vocabulary. This could take a while..." << endl;
-        cout << "B.B In System::Systems. mStrLoadAtlasFromFile is empty. Press Enter...";
-        // cin.get();
 
         mpVocabulary = new ORBVocabulary();
 
-#ifdef USE_DBOW2
+    #ifdef USE_DBOW2
 
-        bool bVocLoad = mpVocabulary->loadFromTextFile(strVocFile);
-        if(!bVocLoad)
-        {
-            cerr << "Wrong path to vocabulary. " << endl;
-            cerr << "Falied to open at: " << strVocFile << endl;
-            exit(-1);
-        }
-        cout << "Vocabulary loaded!" << endl << endl;
+            bool bVocLoad = mpVocabulary->loadFromTextFile(strVocFile);
+            if(!bVocLoad)
+            {
+                cerr << "Wrong path to vocabulary. " << endl;
+                cerr << "Falied to open at: " << strVocFile << endl;
+                exit(-1);
+            }
+            cout << "Vocabulary loaded!" << endl << endl;
 
-#else
+    #else
 
-        try{
-            cout << "!!!LOADING VOCABULARY!!!" << endl << endl;
-            mpVocabulary->load(strVocFile);
-            cout << "!!!LOADED!!!" << endl << endl;
-        } catch(std::exception &ex){
-            cerr<<ex.what()<<endl;
-        }
+            try{
+                cout << "!!!LOADING VOCABULARY!!!" << endl << endl;
+                mpVocabulary->load(strVocFile);
+                cout << "!!!LOADED!!!" << endl << endl;
+            } catch(std::exception &ex){
+                cerr<<ex.what()<<endl;
+            }
 
-#endif
+    #endif
 
-        cout << "Vocabulary loaded, creating KeyFrameDatabase! ";
-        cout << "B.B using mpVocabulary. Press Enter ...";
-        // cin.get();
+    cout << "Vocabulary loaded, creating KeyFrameDatabase! ";
 
         //Create KeyFrame Database
         mpKeyFrameDatabase = new KeyFrameDatabase(*mpVocabulary); // B.B !!! ACHTUNG ACHTUNG !!!
@@ -173,33 +170,30 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
         //Create the Atlas
         cout << "Initialization of Atlas from scratch " << endl;
         mpAtlas = new Atlas(0);
-    } else {
+    } else { // B.B if(mStrLoadAtlasFromFile.empty())
         //Load ORB Vocabulary
         cout << endl << "Loading ORB Vocabulary. This could take a while..." << endl;
-        cout << "B.B In System::Systems. mStrLoadAtlasFromFile is NOT empty. Press Enter...";
-        // cin.get();
-
         mpVocabulary = new ORBVocabulary();
 
-#ifdef USE_DBOW2
+    #ifdef USE_DBOW2
 
-        bool bVocLoad = mpVocabulary->loadFromTextFile(strVocFile);
-        if(!bVocLoad)
-        {
-            cerr << "Wrong path to vocabulary. " << endl;
-            cerr << "Falied to open at: " << strVocFile << endl;
-            exit(-1);
-        }
-        
-#else 
+            bool bVocLoad = mpVocabulary->loadFromTextFile(strVocFile);
+            if(!bVocLoad)
+            {
+                cerr << "Wrong path to vocabulary. " << endl;
+                cerr << "Falied to open at: " << strVocFile << endl;
+                exit(-1);
+            }
+            
+    #else 
 
-        try {
-            mpVocabulary->load(strVocFile);
-        } catch(std::exception &ex){
-            cerr<<ex.what()<<endl;
-        }
+            try {
+                mpVocabulary->load(strVocFile);
+            } catch(std::exception &ex) {
+                cerr<<ex.what()<<endl;
+            }
 
-#endif
+    #endif
 
         cout << "Vocabulary loaded, creating KeyFrameDatabase!" << endl << endl;
 
@@ -213,8 +207,7 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
         cout << "Initialization of Atlas from file: " << mStrLoadAtlasFromFile << endl;
         bool isRead = LoadAtlas(FileType::BINARY_FILE);
 
-        if(!isRead)
-        {
+        if(!isRead) {
             cout << "Error to load the file, please try with other session file or vocabulary file" << endl;
             exit(-1);
         }
@@ -232,7 +225,7 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
         //cout << "Binary file read in " << msElapsed << " ms" << endl;
 
         //usleep(10*1000*1000);
-    }
+    } //B.B end of else of if(mStrLoadAtlasFromFile.empty())
 
 
     if (mSensor==IMU_STEREO || mSensor==IMU_MONOCULAR || mSensor==IMU_RGBD)
@@ -484,6 +477,16 @@ Sophus::SE3f System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const
 
     // B.B Achtung. DOES THE mState changed in this method???
     Sophus::SE3f Tcw = mpTracker->GrabImageRGBD(imToFeed, imDepthToFeed, timestamp, filename);
+    
+    // B.B print Tcw
+    Eigen::Matrix3f R = Tcw.rotationMatrix();
+    Eigen::Vector3f t = Tcw.translation();
+    std::cout << "B.B Tcw = " << std::endl
+              << "[" << R(0,0) << ", " << R(0,1) << ", " << R(0,2) << ", " << t(0) << ";" << std::endl
+              << " " << R(1,0) << ", " << R(1,1) << ", " << R(1,2) << ", " << t(1) << ";" << std::endl
+              << " " << R(2,0) << ", " << R(2,1) << ", " << R(2,2) << ", " << t(2) << ";]";
+    // B.B Jusqu'ici
+
 
     // cout << endl << "B.B in System::TrackRGBD. Transformation matrix: " << endl << Tcw.matrix();
 
@@ -498,11 +501,11 @@ Sophus::SE3f System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const
 #define WITH_TICTOC
 #include <tictoc.hpp>
 
-Sophus::SE3f System::TrackMonocular(const cv::Mat &im, const double &timestamp, const vector<IMU::Point>& vImuMeas, string filename)
-{
+Sophus::SE3f System::TrackMonocular(const cv::Mat &im, const double &timestamp, const vector<IMU::Point>& vImuMeas, string filename) {
 
+    cout << endl << "B.B In System::TrackMonocular --- START Monocular Tracking ---";
     #ifdef WITH_TICTOC
-    printf("\n\n\n-----------START----------- \n");
+        printf("\n\n\n-----------START----------- \n");
     #endif
 
     TIC;
@@ -513,37 +516,33 @@ Sophus::SE3f System::TrackMonocular(const cv::Mat &im, const double &timestamp, 
             return Sophus::SE3f();
     }
 
-    if(mSensor!=MONOCULAR && mSensor!=IMU_MONOCULAR)
-    {
+    if(mSensor != MONOCULAR && mSensor != IMU_MONOCULAR) {
         cerr << "ERROR: you called TrackMonocular but input sensor was not set to Monocular nor Monocular-Inertial." << endl;
         exit(-1);
     }
 
     cv::Mat imToFeed = im.clone();
-    if(settings_ && settings_->needToResize()){
+    if(settings_ && settings_->needToResize()) {
         cv::Mat resizedIm;
-        cv::resize(im,resizedIm,settings_->newImSize());
+        cv::resize(im, resizedIm, settings_->newImSize());
         imToFeed = resizedIm;
     }
 
     // Check mode change
     {
         unique_lock<mutex> lock(mMutexMode);
-        if(mbActivateLocalizationMode)
-        {
+        if(mbActivateLocalizationMode) {
             mpLocalMapper->RequestStop();
 
             // Wait until Local Mapping has effectively stopped
-            while(!mpLocalMapper->isStopped())
-            {
+            while(!mpLocalMapper->isStopped()) {
                 usleep(1000);
             }
 
             mpTracker->InformOnlyTracking(true);
             mbActivateLocalizationMode = false;
         }
-        if(mbDeactivateLocalizationMode)
-        {
+        if(mbDeactivateLocalizationMode) {
             mpTracker->InformOnlyTracking(false);
             mpLocalMapper->Release();
             mbDeactivateLocalizationMode = false;
@@ -553,25 +552,24 @@ Sophus::SE3f System::TrackMonocular(const cv::Mat &im, const double &timestamp, 
     // Check reset
     {
         unique_lock<mutex> lock(mMutexReset);
-        if(mbReset)
-        {
+        if(mbReset) {
             mpTracker->Reset();
             mbReset = false;
             mbResetActiveMap = false;
-        }
-        else if(mbResetActiveMap)
-        {
+        } else if(mbResetActiveMap) {
             cout << "SYSTEM-> Reseting active map in monocular case" << endl;
             mpTracker->ResetActiveMap();
             mbResetActiveMap = false;
         }
     }
 
-    if (mSensor == System::IMU_MONOCULAR)
+    if (mSensor == System::IMU_MONOCULAR){
         for(size_t i_imu = 0; i_imu < vImuMeas.size(); i_imu++)
             mpTracker->GrabImuData(vImuMeas[i_imu]);
+    }
 
-    Sophus::SE3f Tcw = mpTracker->GrabImageMonocular(imToFeed,timestamp,filename);
+    cout << "B.B In System::TrackMonocular. Before calling GrabImageMonocular...";
+    Sophus::SE3f Tcw = mpTracker->GrabImageMonocular(imToFeed, timestamp, filename);
 
     unique_lock<mutex> lock2(mMutexState);
     mTrackingState = mpTracker->mState;
@@ -583,6 +581,8 @@ Sophus::SE3f System::TrackMonocular(const cv::Mat &im, const double &timestamp, 
     #ifdef WITH_TICTOC
     printf("------------END------------ \n\n\n");
     #endif
+
+    std::cout << endl << "B.B. In System::TrackMonocular. Tcw:\n" << Tcw.matrix() << std::endl;
 
     return Tcw;
 }
@@ -682,10 +682,12 @@ bool System::isShutDown() {
 
 void System::SaveTrajectoryTUM(const string &filename) {
     cout << endl << "Saving camera trajectory to " << filename << " ..." << endl;
-    if(mSensor==MONOCULAR) {
-        cerr << "ERROR: SaveTrajectoryTUM cannot be used for monocular." << endl;
-        return;
-    }
+
+    // Comented by Banafshe Bamdad
+    // if(mSensor==MONOCULAR) {
+    //     cerr << "ERROR: SaveTrajectoryTUM cannot be used for monocular." << endl;
+    //     return;
+    // }
 
     vector<KeyFrame*> vpKFs = mpAtlas->GetAllKeyFrames();
     sort(vpKFs.begin(),vpKFs.end(),KeyFrame::lId);
@@ -1503,14 +1505,10 @@ bool System::isFinished()
     return (GetTimeFromIMUInit()>0.1);
 }
 
-void System::ChangeDataset()
-{
-    if(mpAtlas->GetCurrentMap()->KeyFramesInMap() < 12)
-    {
+void System::ChangeDataset() {
+    if(mpAtlas->GetCurrentMap()->KeyFramesInMap() < 12) {
         mpTracker->ResetActiveMap();
-    }
-    else
-    {
+    } else {
         mpTracker->CreateMapInAtlas();
     }
 

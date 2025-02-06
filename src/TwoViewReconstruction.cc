@@ -38,9 +38,15 @@ namespace ORB_SLAM3
         mMaxIterations = iterations;
     }
 
+    /**
+     * B.B
+     * reconstruct the 3D scene from two views by 
+     * using matches between keypoints in these views and 
+     * then using either a homography or a fundamental matrix approach based on the context of the scene.
+    */
     bool TwoViewReconstruction::Reconstruct(const std::vector<cv::KeyPoint>& vKeys1, const std::vector<cv::KeyPoint>& vKeys2, const vector<int> &vMatches12,
-                                             Sophus::SE3f &T21, vector<cv::Point3f> &vP3D, vector<bool> &vbTriangulated)
-    {
+                                             Sophus::SE3f &T21, vector<cv::Point3f> &vP3D, vector<bool> &vbTriangulated) {
+        // B.B Initialization
         mvKeys1.clear();
         mvKeys2.clear();
 
@@ -50,44 +56,48 @@ namespace ORB_SLAM3
         // Fill structures with current keypoints and matches with reference frame
         // Reference Frame: 1, Current Frame: 2
         mvMatches12.clear();
+        // B.B To store the valid matches between the two sets of keypoints
         mvMatches12.reserve(mvKeys2.size());
+        // B.B to keep track of which keypoints in the first set have been matched.
         mvbMatched1.resize(mvKeys1.size());
-        for(size_t i=0, iend=vMatches12.size();i<iend; i++)
-        {
-            if(vMatches12[i]>=0)
-            {
-                mvMatches12.push_back(make_pair(i,vMatches12[i]));
-                mvbMatched1[i]=true;
+        for(size_t i = 0, iend = vMatches12.size(); i < iend; i++) {
+
+            if(vMatches12[i] >= 0) {
+                mvMatches12.push_back(make_pair(i, vMatches12[i]));
+                mvbMatched1[i] = true;
+            } else {
+                mvbMatched1[i] = false;
             }
-            else
-                mvbMatched1[i]=false;
         }
 
         const int N = mvMatches12.size();
 
+        cout << endl << "B.B In TwoViewReconstruction::Reconstruct, Number of matches: " << N;
+
+        // B.B RANSAK preparation 
         // Indices for minimum set selection
         vector<size_t> vAllIndices;
         vAllIndices.reserve(N);
         vector<size_t> vAvailableIndices;
 
-        for(int i=0; i<N; i++)
-        {
+        for(int i = 0; i < N; i++) {
             vAllIndices.push_back(i);
         }
 
         // Generate sets of 8 points for each RANSAC iteration
-        mvSets = vector< vector<size_t> >(mMaxIterations,vector<size_t>(8,0));
+        // B.B Prepares a 2D vector to store indices for sets of 8 points for each RANSAC iteration, based on the maximum number of iterations
+        mvSets = vector< vector<size_t> >(mMaxIterations, vector<size_t>(8, 0)); // B.B 200 x 8
 
+        // B.B Seeds the random number generator to ensure reproducibility.
         DUtils::Random::SeedRandOnce(0);
 
-        for(int it=0; it<mMaxIterations; it++)
-        {
+        for(int it = 0; it < mMaxIterations; it++) {
             vAvailableIndices = vAllIndices;
 
             // Select a minimum set
-            for(size_t j=0; j<8; j++)
-            {
-                int randi = DUtils::Random::RandomInt(0,vAvailableIndices.size()-1);
+            // B.B sets up the RANSAC iterations by randomly selecting 8 matches for each iteration to estimate the homography and fundamental matrix.
+            for(size_t j = 0; j < 8; j++) {
+                int randi = DUtils::Random::RandomInt(0, vAvailableIndices.size() - 1);
                 int idx = vAvailableIndices[randi];
 
                 mvSets[it][j] = idx;
@@ -102,61 +112,66 @@ namespace ORB_SLAM3
         float SH, SF;
         Eigen::Matrix3f H, F;
 
-        thread threadH(&TwoViewReconstruction::FindHomography,this,ref(vbMatchesInliersH), ref(SH), ref(H));
-        thread threadF(&TwoViewReconstruction::FindFundamental,this,ref(vbMatchesInliersF), ref(SF), ref(F));
+        thread threadH(&TwoViewReconstruction::FindHomography, this, ref(vbMatchesInliersH), ref(SH), ref(H));
+        thread threadF(&TwoViewReconstruction::FindFundamental, this ,ref(vbMatchesInliersF), ref(SF), ref(F));
 
         // Wait until both threads have finished
         threadH.join();
         threadF.join();
 
+        /**
+         * B.B
+         * Computes the ratio RH of the scores obtained from the homography and fundamental matrix computations. 
+         * This ratio helps in deciding whether the scene is planar or not, 
+         * which in turn decides whether to use homography (H) or fundamental matrix (F) for reconstruction.
+         * */ 
         // Compute ratio of scores
-        if(SH+SF == 0.f) return false;
-        float RH = SH/(SH+SF);
+        if(SH + SF == 0.f) return false;
+        float RH = SH / (SH + SF);
 
-        float minParallax = 1.0;
+        float minParallax = 1.0; // commented by B.B
+        // float minParallax = 0.8; // Added by B.B
 
         // Try to reconstruct from homography or fundamental depending on the ratio (0.40-0.45)
-        if(RH>0.50) // if(RH>0.40)
-        {
-            //cout << "Initialization from Homography" << endl;
-            return ReconstructH(vbMatchesInliersH,H, mK,T21,vP3D,vbTriangulated,minParallax,50);
-        }
-        else //if(pF_HF>0.6)
-        {
-            //cout << "Initialization from Fundamental" << endl;
-            return ReconstructF(vbMatchesInliersF,F,mK,T21,vP3D,vbTriangulated,minParallax,50);
+        if(RH > 0.50) { // if(RH>0.40)
+            cout << endl << "--- Initialization from Homography ---" << endl;
+            return ReconstructH(vbMatchesInliersH, H, mK, T21, vP3D, vbTriangulated, minParallax, 50);
+        } else { //if(pF_HF>0.6)
+            cout << endl << "--- Initialization from Fundamental --- " << endl;
+            return ReconstructF(vbMatchesInliersF, F, mK, T21, vP3D, vbTriangulated, minParallax, 50);
         }
     }
 
-    void TwoViewReconstruction::FindHomography(vector<bool> &vbMatchesInliers, float &score, Eigen::Matrix3f &H21)
-    {
+    /**
+     * B.B
+     * To compute the homography matrix between two views based on matched keypoints, using a RANSAC algorithm to robustly handle outliers.
+    */
+    void TwoViewReconstruction::FindHomography(vector<bool> &vbMatchesInliers, float &score, Eigen::Matrix3f &H21) {
         // Number of putative matches
         const int N = mvMatches12.size();
 
         // Normalize coordinates
         vector<cv::Point2f> vPn1, vPn2;
         Eigen::Matrix3f T1, T2;
-        Normalize(mvKeys1,vPn1, T1);
-        Normalize(mvKeys2,vPn2, T2);
+        Normalize(mvKeys1, vPn1, T1);
+        Normalize(mvKeys2, vPn2, T2);
         Eigen::Matrix3f T2inv = T2.inverse();
 
         // Best Results variables
         score = 0.0;
-        vbMatchesInliers = vector<bool>(N,false);
+        vbMatchesInliers = vector<bool>(N, false);
 
         // Iteration variables
         vector<cv::Point2f> vPn1i(8);
         vector<cv::Point2f> vPn2i(8);
         Eigen::Matrix3f H21i, H12i;
-        vector<bool> vbCurrentInliers(N,false);
+        vector<bool> vbCurrentInliers(N, false);
         float currentScore;
 
         // Perform all RANSAC iterations and save the solution with highest score
-        for(int it=0; it<mMaxIterations; it++)
-        {
+        for(int it = 0; it < mMaxIterations; it++) {
             // Select a minimum set
-            for(size_t j=0; j<8; j++)
-            {
+            for(size_t j = 0; j < 8; j++) {
                 int idx = mvSets[it][j];
 
                 vPn1i[j] = vPn1[mvMatches12[idx].first];
@@ -169,8 +184,7 @@ namespace ORB_SLAM3
 
             currentScore = CheckHomography(H21i, H12i, vbCurrentInliers, mSigma);
 
-            if(currentScore>score)
-            {
+            if(currentScore > score) {
                 H21 = H21i;
                 vbMatchesInliers = vbCurrentInliers;
                 score = currentScore;
@@ -179,17 +193,16 @@ namespace ORB_SLAM3
     }
 
 
-    void TwoViewReconstruction::FindFundamental(vector<bool> &vbMatchesInliers, float &score, Eigen::Matrix3f &F21)
-    {
+    void TwoViewReconstruction::FindFundamental(vector<bool> &vbMatchesInliers, float &score, Eigen::Matrix3f &F21) {
         // Number of putative matches
         const int N = vbMatchesInliers.size();
 
         // Normalize coordinates
-        vector<cv::Point2f> vPn1, vPn2;
-        Eigen::Matrix3f T1, T2;
-        Normalize(mvKeys1,vPn1, T1);
-        Normalize(mvKeys2,vPn2, T2);
-        Eigen::Matrix3f T2t = T2.transpose();
+        vector<cv::Point2f> vPn1, vPn2; // B.B The normalized points from the first and second set of keypoints
+        Eigen::Matrix3f T1, T2; // B.B Transformation matrices that normalize the keypoints in each image.
+        Normalize(mvKeys1, vPn1, T1); // B.B making keypoints more uniform in scale and distribution
+        Normalize(mvKeys2, vPn2, T2);
+        Eigen::Matrix3f T2t = T2.transpose(); // B.B used later in the computation of the fundamental matrix.
 
         // Best Results variables
         score = 0.0;
@@ -203,25 +216,22 @@ namespace ORB_SLAM3
         float currentScore;
 
         // Perform all RANSAC iterations and save the solution with highest score
-        for(int it=0; it<mMaxIterations; it++)
-        {
+        for(int it = 0; it < mMaxIterations; it++) {
             // Select a minimum set
-            for(int j=0; j<8; j++)
-            {
+            for(int j = 0; j < 8; j++) {
                 int idx = mvSets[it][j];
 
                 vPn1i[j] = vPn1[mvMatches12[idx].first];
                 vPn2i[j] = vPn2[mvMatches12[idx].second];
             }
 
-            Eigen::Matrix3f Fn = ComputeF21(vPn1i,vPn2i);
+            Eigen::Matrix3f Fn = ComputeF21(vPn1i, vPn2i);
 
             F21i = T2t * Fn * T1;
 
             currentScore = CheckFundamental(F21i, vbCurrentInliers, mSigma);
 
-            if(currentScore>score)
-            {
+            if(currentScore > score) {
                 F21 = F21i;
                 vbMatchesInliers = vbCurrentInliers;
                 score = currentScore;
@@ -472,91 +482,116 @@ namespace ORB_SLAM3
         return score;
     }
 
+    /**
+     * B.B
+     * To reconstruct the 3D scene from two views using the Fundamental matrix approach.
+     * vbMatchesInliers: indicates if a match between two views is an inlier or an outlier
+     * F21: The Fundamental matrix relating two views
+     * K: The camera intrinsic matrix
+     * T21: The transformation [R|t] from the first view to the second, which is output if the reconstruction is successful.
+     * vP3D: A vector to store the 3D points of the scene reconstructed, which is output if the reconstruction is successful.
+     * vbTriangulated: indicates whether a 3D point has been successfully triangulated.
+     * minParallax = 1: The minimum parallax (in degrees) required for the reconstruction to be considered valid.
+     * minTriangulated = 50: The minimum number of points that need to be successfully triangulated for the reconstruction to be considered valid.
+    */
     bool TwoViewReconstruction::ReconstructF(vector<bool> &vbMatchesInliers, Eigen::Matrix3f &F21, Eigen::Matrix3f &K,
-                                             Sophus::SE3f &T21, vector<cv::Point3f> &vP3D, vector<bool> &vbTriangulated, float minParallax, int minTriangulated)
-    {
-        int N=0;
-        for(size_t i=0, iend = vbMatchesInliers.size() ; i<iend; i++)
-            if(vbMatchesInliers[i])
+                                             Sophus::SE3f &T21, vector<cv::Point3f> &vP3D, vector<bool> &vbTriangulated, 
+                                             float minParallax, int minTriangulated) {
+        
+        // B.B the number of inlier matches
+        int N = 0;
+        for(size_t i = 0, iend = vbMatchesInliers.size() ; i < iend; i++) {
+            if(vbMatchesInliers[i]) {
                 N++;
+            }
+        }
+        cout << endl << "B.B In TwoViewReconstruction::ReconstructF, vbMatchesInliers.size(): " << vbMatchesInliers.size() << ", # of inlier: " << N;
 
         // Compute Essential Matrix from Fundamental Matrix
         Eigen::Matrix3f E21 = K.transpose() * F21 * K;
 
+        // B.B Initialize two possible rotation matrices and a translation vector to store the possible solutions of the decomposition of the Essential matrix.
         Eigen::Matrix3f R1, R2;
         Eigen::Vector3f t;
 
         // Recover the 4 motion hypotheses
-        DecomposeE(E21,R1,R2,t);
+        DecomposeE(E21, R1, R2, t);
 
+        // B.B Create a second translation hypothesis
         Eigen::Vector3f t1 = t;
         Eigen::Vector3f t2 = -t;
 
         // Reconstruct with the 4 hyphoteses and check
+        // B.B Prepare Containers for Reconstructed Points and Triangulation Status
         vector<cv::Point3f> vP3D1, vP3D2, vP3D3, vP3D4;
-        vector<bool> vbTriangulated1,vbTriangulated2,vbTriangulated3, vbTriangulated4;
-        float parallax1,parallax2, parallax3, parallax4;
+        vector<bool> vbTriangulated1, vbTriangulated2, vbTriangulated3, vbTriangulated4;
+        float parallax1, parallax2, parallax3, parallax4;
 
-        int nGood1 = CheckRT(R1,t1,mvKeys1,mvKeys2,mvMatches12,vbMatchesInliers,K, vP3D1, 4.0*mSigma2, vbTriangulated1, parallax1);
-        int nGood2 = CheckRT(R2,t1,mvKeys1,mvKeys2,mvMatches12,vbMatchesInliers,K, vP3D2, 4.0*mSigma2, vbTriangulated2, parallax2);
-        int nGood3 = CheckRT(R1,t2,mvKeys1,mvKeys2,mvMatches12,vbMatchesInliers,K, vP3D3, 4.0*mSigma2, vbTriangulated3, parallax3);
-        int nGood4 = CheckRT(R2,t2,mvKeys1,mvKeys2,mvMatches12,vbMatchesInliers,K, vP3D4, 4.0*mSigma2, vbTriangulated4, parallax4);
+        // B.B mSigma2: a threshold for reprojection errors to determine the quality of 3D points reconstructed from image matches
+        int nGood1 = CheckRT(R1, t1, mvKeys1, mvKeys2, mvMatches12, vbMatchesInliers, K, vP3D1, 4.0 * mSigma2, vbTriangulated1, parallax1);
+        int nGood2 = CheckRT(R2, t1, mvKeys1, mvKeys2, mvMatches12, vbMatchesInliers, K, vP3D2, 4.0 * mSigma2, vbTriangulated2, parallax2);
+        int nGood3 = CheckRT(R1, t2, mvKeys1, mvKeys2, mvMatches12, vbMatchesInliers, K, vP3D3, 4.0 * mSigma2, vbTriangulated3, parallax3);
+        int nGood4 = CheckRT(R2, t2, mvKeys1, mvKeys2, mvMatches12, vbMatchesInliers, K, vP3D4, 4.0 * mSigma2, vbTriangulated4, parallax4);
 
-        int maxGood = max(nGood1,max(nGood2,max(nGood3,nGood4)));
 
-        int nMinGood = max(static_cast<int>(0.9*N),minTriangulated);
+        cout << endl << "B.B In TwoViewReconstruction::ReconstructF, nGood1: " << nGood1 << ", nGood2: " << nGood2 << ", nGood3: " << nGood3 << ", nGood4: " << nGood4;
+
+        int maxGood = max(nGood1, max(nGood2, max(nGood3, nGood4)));
+
+        // B.B a threshold for the minimum acceptable number of good reconstructions
+        int nMinGood = max(static_cast<int>(0.9 * N), minTriangulated);
 
         int nsimilar = 0;
-        if(nGood1>0.7*maxGood)
+        if(nGood1 > 0.7 * maxGood)
             nsimilar++;
-        if(nGood2>0.7*maxGood)
+        if(nGood2 > 0.7 * maxGood)
             nsimilar++;
-        if(nGood3>0.7*maxGood)
+        if(nGood3 > 0.7 * maxGood)
             nsimilar++;
-        if(nGood4>0.7*maxGood)
+        if(nGood4 > 0.7 * maxGood)
             nsimilar++;
 
+        cout << endl << "B.B maxGood: " << maxGood << ", nMinGood: " << nMinGood << ", nsimilar: " << nsimilar;
         // If there is not a clear winner or not enough triangulated points reject initialization
-        if(maxGood<nMinGood || nsimilar>1)
-        {
+        if(maxGood < nMinGood || nsimilar > 1) {
             return false;
         }
 
+        cout << endl << "B.B minParallax: " << minParallax << ", parallax1: " << parallax1 << ", parallax12: " << parallax2 << ", parallax3: " << parallax3 << ", parallax4: " << parallax4;
+        
+        /**
+         * B.B
+         * If a hypothesis meets the minimum parallax criterion, 
+         * update vP3D and vbTriangulated with the reconstructed 3D points and their triangulation status, 
+         * set T21 with the corresponding rotation-translation pair
+        */
         // If best reconstruction has enough parallax initialize
-        if(maxGood==nGood1)
-        {
-            if(parallax1>minParallax)
-            {
+        if(maxGood == nGood1) {
+            if(parallax1 > minParallax) {
                 vP3D = vP3D1;
                 vbTriangulated = vbTriangulated1;
 
                 T21 = Sophus::SE3f(R1, t1);
                 return true;
             }
-        }else if(maxGood==nGood2)
-        {
-            if(parallax2>minParallax)
-            {
+        } else if(maxGood == nGood2) {
+            if(parallax2 > minParallax) {
                 vP3D = vP3D2;
                 vbTriangulated = vbTriangulated2;
 
                 T21 = Sophus::SE3f(R2, t1);
                 return true;
             }
-        }else if(maxGood==nGood3)
-        {
-            if(parallax3>minParallax)
-            {
+        } else if(maxGood == nGood3) {
+            if(parallax3 > minParallax) {
                 vP3D = vP3D3;
                 vbTriangulated = vbTriangulated3;
 
                 T21 = Sophus::SE3f(R1, t2);
                 return true;
             }
-        }else if(maxGood==nGood4)
-        {
-            if(parallax4>minParallax)
-            {
+        } else if(maxGood == nGood4) {
+            if(parallax4 > minParallax) {
                 vP3D = vP3D4;
                 vbTriangulated = vbTriangulated4;
 
@@ -783,17 +818,17 @@ namespace ORB_SLAM3
         T(2,2) = 1.f;
     }
 
+    // B.B th2: a threshold for reprojection errors to determine the quality of 3D points reconstructed from image matches
     int TwoViewReconstruction::CheckRT(const Eigen::Matrix3f &R, const Eigen::Vector3f &t, const vector<cv::KeyPoint> &vKeys1, const vector<cv::KeyPoint> &vKeys2,
                                        const vector<Match> &vMatches12, vector<bool> &vbMatchesInliers,
-                                       const Eigen::Matrix3f &K, vector<cv::Point3f> &vP3D, float th2, vector<bool> &vbGood, float &parallax)
-    {
+                                       const Eigen::Matrix3f &K, vector<cv::Point3f> &vP3D, float th2, vector<bool> &vbGood, float &parallax) {
         // Calibration parameters
         const float fx = K(0,0);
         const float fy = K(1,1);
         const float cx = K(0,2);
         const float cy = K(1,2);
 
-        vbGood = vector<bool>(vKeys1.size(),false);
+        vbGood = vector<bool>(vKeys1.size(), false);
         vP3D.resize(vKeys1.size());
 
         vector<float> vCosParallax;
@@ -815,13 +850,14 @@ namespace ORB_SLAM3
 
         Eigen::Vector3f O2 = -R.transpose() * t;
 
-        int nGood=0;
+        int nGood = 0;
 
-        for(size_t i=0, iend=vMatches12.size();i<iend;i++)
-        {
+        // B.B iterates over the matches between keypoints in the first and second images (vMatches12)
+        for(size_t i = 0, iend = vMatches12.size(); i < iend; i++) {
             if(!vbMatchesInliers[i])
                 continue;
-
+            
+            // B.B Triangulates the 3D point corresponding to the match using the projection matrices and the keypoints.
             const cv::KeyPoint &kp1 = vKeys1[vMatches12[i].first];
             const cv::KeyPoint &kp2 = vKeys2[vMatches12[i].second];
 
@@ -832,12 +868,15 @@ namespace ORB_SLAM3
             GeometricTools::Triangulate(x_p1, x_p2, P1, P2, p3dC1);
 
 
-            if(!isfinite(p3dC1(0)) || !isfinite(p3dC1(1)) || !isfinite(p3dC1(2)))
-            {
-                vbGood[vMatches12[i].first]=false;
+            if(!isfinite(p3dC1(0)) || !isfinite(p3dC1(1)) || !isfinite(p3dC1(2))) {
+                vbGood[vMatches12[i].first] = false;
                 continue;
             }
 
+            /**
+            * B.B calculates the parallax (cosine of the angle) between the two viewing rays for the 3D point. 
+            * A low parallax means the point is far away or the baseline (distance between cameras) is too short, which can lead to inaccurate triangulation.
+            */
             // Check parallax
             Eigen::Vector3f normal1 = p3dC1 - O1;
             float dist1 = normal1.norm();
@@ -845,57 +884,79 @@ namespace ORB_SLAM3
             Eigen::Vector3f normal2 = p3dC1 - O2;
             float dist2 = normal2.norm();
 
-            float cosParallax = normal1.dot(normal2) / (dist1*dist2);
+            float cosParallax = normal1.dot(normal2) / (dist1 * dist2);
 
+            // B.B ensures that the triangulated 3D point lies in front of both cameras by checking its depth component.
             // Check depth in front of first camera (only if enough parallax, as "infinite" points can easily go to negative depth)
-            if(p3dC1(2)<=0 && cosParallax<0.99998)
+            if(p3dC1(2) <= 0 && cosParallax < 0.99998)
                 continue;
 
             // Check depth in front of second camera (only if enough parallax, as "infinite" points can easily go to negative depth)
             Eigen::Vector3f p3dC2 = R * p3dC1 + t;
 
-            if(p3dC2(2)<=0 && cosParallax<0.99998)
+            if(p3dC2(2) <= 0 && cosParallax < 0.99998)
                 continue;
 
+
+            /**
+            * B.B 
+            * Check the reprojection error for each triangulated 3D point in both images. 
+            * The reprojection error is the squared distance between the projected point (using the 3D point and camera parameters) 
+            * and the actual keypoint detected in the image. 
+            * If this squared distance exceeds th2 for either of the two images, the 3D point is considered inaccurate, and the match is discarded.
+            */
             // Check reprojection error in first image
             float im1x, im1y;
-            float invZ1 = 1.0/p3dC1(2);
-            im1x = fx*p3dC1(0)*invZ1+cx;
-            im1y = fy*p3dC1(1)*invZ1+cy;
+            float invZ1 = 1.0 / p3dC1(2);
+            // B.B projects the 3D point back onto the first image plane using the intrinsic camera parameters 
+            im1x = fx * p3dC1(0) * invZ1 + cx;
+            im1y = fy * p3dC1(1) * invZ1 + cy;
 
-            float squareError1 = (im1x-kp1.pt.x)*(im1x-kp1.pt.x)+(im1y-kp1.pt.y)*(im1y-kp1.pt.y);
+            // B.B compares the projected point's coordinates with the original keypoint coordinates.
+            float squareError1 = (im1x - kp1.pt.x) * (im1x - kp1.pt.x) + (im1y - kp1.pt.y) * (im1y - kp1.pt.y);
 
-            if(squareError1>th2)
+            // B.B If the squared distance is greater than th2, the point is rejected.
+            if(squareError1 > th2)
                 continue;
 
             // Check reprojection error in second image
             float im2x, im2y;
-            float invZ2 = 1.0/p3dC2(2);
-            im2x = fx*p3dC2(0)*invZ2+cx;
-            im2y = fy*p3dC2(1)*invZ2+cy;
+            float invZ2 = 1.0 / p3dC2(2);
+            // B.B projects the 3D point onto the second image plane
+            im2x = fx * p3dC2(0) * invZ2 + cx;
+            im2y = fy * p3dC2(1) * invZ2 + cy;
 
-            float squareError2 = (im2x-kp2.pt.x)*(im2x-kp2.pt.x)+(im2y-kp2.pt.y)*(im2y-kp2.pt.y);
+            // B.B calculates the squared distance to the corresponding keypoint
+            float squareError2 = (im2x - kp2.pt.x) * (im2x - kp2.pt.x) + (im2y - kp2.pt.y) * (im2y - kp2.pt.y);
 
-            if(squareError2>th2)
+            if(squareError2 > th2)
                 continue;
 
+            /**
+            * Points that pass both the depth check (in front of both cameras) and the reprojection error check (for both images) are considered good. 
+            * They are added to the list of 3D points (vP3D), and their corresponding matches are marked as good (vbGood).
+            */
             vCosParallax.push_back(cosParallax);
             vP3D[vMatches12[i].first] = cv::Point3f(p3dC1(0), p3dC1(1), p3dC1(2));
             nGood++;
 
-            if(cosParallax<0.99998)
-                vbGood[vMatches12[i].first]=true;
+            if(cosParallax < 0.99998)
+                vbGood[vMatches12[i].first] = true;
         }
 
-        if(nGood>0)
-        {
-            sort(vCosParallax.begin(),vCosParallax.end());
 
-            size_t idx = min(50,int(vCosParallax.size()-1));
-            parallax = acos(vCosParallax[idx])*180/CV_PI;
+        /**
+        * B.B calculates the parallax for these points to estimate the overall quality and depth perception of the reconstruction. 
+        * The parallax is computed as the arccosine of the cosine parallax values, converted to degrees.
+        */
+        if(nGood > 0) {
+            sort(vCosParallax.begin(), vCosParallax.end());
+
+            size_t idx = min(50, int(vCosParallax.size() - 1));
+            parallax = acos(vCosParallax[idx]) * 180 / CV_PI;
         }
         else
-            parallax=0;
+            parallax = 0;
 
         return nGood;
     }

@@ -91,7 +91,7 @@ void LoopClosing::Run() {
     mbFinished = false;
 
     while(1) {
-        // cout << endl << "B.B On top of the Run method of '''Loop Closing''' thread. press Enter...";
+        // cout << endl << "B.B On top of the Run method of '''Loop Closing''' thread.";
         // cin.get();
 
         //NEW LOOP AND MERGE DETECTION ALGORITHM
@@ -412,8 +412,8 @@ bool LoopClosing::NewDetectCommonRegions() {
 
 
             // Commented by Banafshe to disable LoopClosing functionality, mbLoopDetected = false; added by Banafshe
-            mbLoopDetected = mnLoopNumCoincidences >= 3;
-            // mbLoopDetected = false; // B.B
+            // mbLoopDetected = mnLoopNumCoincidences >= 3;
+            mbLoopDetected = false; // B.B
             cout << endl << "B.B in LoopClosing class. mbLoopDetected: " << boolalpha << mbLoopDetected;
             mnLoopNumNotFound = 0;
 
@@ -526,8 +526,8 @@ bool LoopClosing::NewDetectCommonRegions() {
     if(!bLoopDetectedInKF && !vpLoopBowCand.empty())
     {
         // commented by Banafshe to disable LoopClosing functionality, mbLoopDetected = false; added by Banafshe
-        mbLoopDetected = DetectCommonRegionsFromBoW(vpLoopBowCand, mpLoopMatchedKF, mpLoopLastCurrentKF, mg2oLoopSlw, mnLoopNumCoincidences, mvpLoopMPs, mvpLoopMatchedMPs);
-        // mbLoopDetected = false; // B.B
+        // mbLoopDetected = DetectCommonRegionsFromBoW(vpLoopBowCand, mpLoopMatchedKF, mpLoopLastCurrentKF, mg2oLoopSlw, mnLoopNumCoincidences, mvpLoopMPs, mvpLoopMatchedMPs);
+        mbLoopDetected = false; // B.B
     }
     // Merge candidates
     if(!bMergeDetectedInKF && !vpMergeBowCand.empty())

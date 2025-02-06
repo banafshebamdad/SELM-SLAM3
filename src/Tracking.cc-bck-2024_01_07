@@ -2603,7 +2603,7 @@ void Tracking::StereoInitialization() {
         TOC
 
         cout << endl << "Initialization is finished. Press Enter...";
-        cin.get();
+        //cin.get();
 
     } else { // B.B 
         cout << endl << "B.B In Tracking::StereoInitialization(), Malheureusement, le nombre de Features extraites est mois de 500." << endl;
@@ -3869,7 +3869,7 @@ void Tracking::UpdateLocalKeyFrames()
 bool Tracking::Relocalization() {
     Verbose::PrintMess("Starting relocalization", Verbose::VERBOSITY_NORMAL);
     
-    cout << endl << "B.B Starting relocalization. Press Enter..."; cin.get();
+    cout << endl << "B.B Starting relocalization. Press Enter...";
 
     // Compute Bag of Words Vector
     #ifndef USE_SELM_EXTRACTOR

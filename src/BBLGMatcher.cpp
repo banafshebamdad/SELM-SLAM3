@@ -9,7 +9,6 @@
 
 #include <iostream>
 #include <string>
-
 #include "Frame.h"
 #include "KeyFrame.h"
 #include "MapPoint.h"
@@ -65,16 +64,19 @@ namespace SELMSLAM {
         std::vector<cv::KeyPoint> vMPKeypoint; // to send to LightGlue model
         vector<MapPoint*> projectedMapPoints;
 
+
+        cout << endl << "B.B In BBLGMatcher::SearchByProjection. At the top of the function #MPs: " << vpMapPoints.size() << ", #features: " << F.N << endl;
         for(size_t iMP = 0; iMP < vpMapPoints.size(); iMP++) {
 
             MapPoint* pMP = vpMapPoints[iMP];
 
-            
-            if(!pMP->mbTrackInView && !pMP->mbTrackInViewR){
+            if(!pMP->mbTrackInView && !pMP->mbTrackInViewR) {
             // if(!pMP->mbTrackInView){
                 continue;
             }
 
+            // bFarPoints = false , thFarPoints = 0
+            // pMP->mTrackDepthis the distance of the MapPoint from the camera center (in camera coordinate system) (see my_notes)
             if(bFarPoints && pMP->mTrackDepth > thFarPoints)
                 continue;
 
@@ -104,6 +106,7 @@ namespace SELMSLAM {
             cv::vconcat(vMPDescriptors, MPDescriptors);
         }
 
+        cout << endl << "B.B In BBLGMatcher::SearchByProjection. #MPs: " << vpMapPoints.size() << ", # projectedMapPoints: " << projectedMapPoints.size() << ", # Fs: " << F.N << endl;
         SELMSLAM::BBLightGlue bblg(BBLIGHTGLUE_WEIGHT_PATH, 0.0f); 
         int nmatches = bblg.match(projectedMapPoints, MPDescriptors, vMPKeypoint, F, BBLightGlue::CallbackCheckMapPoint);
 
@@ -206,6 +209,167 @@ namespace SELMSLAM {
         return nmatches;
     }
 
+    /**
+     * This method is used in Monocular Initialization step
+     * vnMatches12: to store the indices of matches
+    */
+    int BBLGMatcher::SearchForInitialization(Frame &F1, Frame &F2, vector<cv::Point2f> &vbPrevMatched, vector<int> &vnMatches12) {
 
-    
+        // 
+        // Preparation for LightGlue
+        // 
+
+        // F1: IniFrame
+        SELMSLAM::ImageFeatures features1;
+
+        long unsigned int f1Id = F1.mnId;
+        cv::Mat f1Descriptors = F1.mDescriptors;
+        vector<cv::KeyPoint> f1Keypoints = F1.mvKeysUn;
+
+        features1.img_idx = f1Id;
+        features1.img_size = cv::Size(640, 480); // @todo Di Okt. 31 07:45 read from settings
+        features1.keypoints = f1Keypoints;
+        features1.descriptors = f1Descriptors.getUMat(cv::ACCESS_FAST);
+
+        // F2: current frame
+        SELMSLAM::ImageFeatures features2;
+
+        long unsigned int f2Id = F2.mnId;
+        cv::Mat f2Descriptors = F2.mDescriptors;
+        vector<cv::KeyPoint> f2Keypoints = F2.mvKeysUn;
+
+        features2.img_idx = f2Id;
+        features2.img_size = cv::Size(640, 480);
+        features2.keypoints = f2Keypoints;
+        features2.descriptors = f2Descriptors.getUMat(cv::ACCESS_FAST);
+
+        // 
+        // matching process
+        // 
+
+        SELMSLAM::MatchesInfo matches_info;
+        float matchThresh = 0.0f;
+        SELMSLAM::BBLightGlue bblg(BBLIGHTGLUE_WEIGHT_PATH, matchThresh);
+        bblg.perform_match(features1, features2, matches_info);
+
+        vnMatches12 = vector<int>(F1.mvKeysUn.size(), -1);
+
+        // for (int i = 0; i < F1.mvKeysUn.size(); ++i) {
+        for (int i = 0; i < matches_info.match1counts; ++i) {
+            vnMatches12[i] = matches_info.vmatch1[i];
+        }
+
+        // to store unique pairs of matched keypoints. This set will be used to ensure that duplicates are not included in the final matches.
+        std::set<std::pair<int, int> > matches;
+        for (int i = 0; i < matches_info.match1counts; i++) {
+            if (matches_info.vmatch1[i] > -1 && matches_info.vmscore1[i] > matchThresh && matches_info.vmatch2[matches_info.vmatch1[i]] == i) {
+                cv::DMatch mt;
+                mt.queryIdx = i;
+                mt.trainIdx = matches_info.vmatch1[i];
+                matches_info.matches.push_back(mt);
+                matches.insert(std::make_pair(mt.queryIdx, mt.trainIdx));
+            }
+        }
+        for (int i = 0; i < matches_info.match2counts; i++) {
+            if (matches_info.vmatch2[i] > -1 && matches_info.vmscore2[i] > matchThresh && matches_info.vmatch1[matches_info.vmatch2[i]] == i) {
+                cv::DMatch mt;
+                mt.queryIdx = matches_info.vmatch2[i];
+                mt.trainIdx = i;
+                if (matches.find(std::make_pair(mt.queryIdx, mt.trainIdx)) == matches.end()) {
+                    matches_info.matches.push_back(mt);
+                }
+            }
+        }
+
+        // B.B Updates the vbPrevMatched vector with the new matches for the next iteration
+        //Update prev matched
+        for(size_t i1 = 0, iend1 = vnMatches12.size(); i1 < iend1; i1++) {
+            if(vnMatches12[i1] >= 0) {
+                vbPrevMatched[i1] = F2.mvKeysUn[vnMatches12[i1]].pt;
+            }
+        }
+        
+        return matches_info.matches.size();
+    }
+
+    // @todo Mi Feb 7, 2020
+    // To search matches that fullfil epipolar constraint, see ORBmatcher::SearchForTriangulation
+    int BBLGMatcher::SearchForTriangulation(KeyFrame *pKF1, KeyFrame *pKF2, vector<pair<size_t, size_t> > &vMatchedPairs) {
+
+
+        // 
+        // Preparation for LightGlue
+        // 
+
+        // pKF1
+        SELMSLAM::ImageFeatures features1;
+
+        long unsigned int f1Id = pKF1->mnId;
+        cv::Mat f1Descriptors = pKF1->mDescriptors;
+        vector<cv::KeyPoint> f1Keypoints = pKF1->mvKeysUn;
+
+        features1.img_idx = f1Id;
+        features1.img_size = cv::Size(640, 480); // @todo Di Okt. 31 07:45 read from settings
+        features1.keypoints = f1Keypoints;
+        features1.descriptors = f1Descriptors.getUMat(cv::ACCESS_FAST);
+
+        // pKF2
+        SELMSLAM::ImageFeatures features2;
+
+        long unsigned int f2Id = pKF2->mnId;
+        cv::Mat f2Descriptors = pKF2->mDescriptors;
+        vector<cv::KeyPoint> f2Keypoints = pKF2->mvKeysUn;
+
+        features2.img_idx = f2Id;
+        features2.img_size = cv::Size(640, 480);
+        features2.keypoints = f2Keypoints;
+        features2.descriptors = f2Descriptors.getUMat(cv::ACCESS_FAST);
+
+        // 
+        // matching process
+        // 
+
+        SELMSLAM::MatchesInfo matches_info;
+        float matchThresh = 0.0f;
+        SELMSLAM::BBLightGlue bblg(BBLIGHTGLUE_WEIGHT_PATH, matchThresh);
+        bblg.perform_match(features1, features2, matches_info);
+
+        // to store unique pairs of matched keypoints. This set will be used to ensure that duplicates are not included in the final matches.
+        std::set<std::pair<int, int> > matches;
+        for (int i = 0; i < matches_info.match1counts; i++) {
+            if (matches_info.vmatch1[i] > -1 && matches_info.vmscore1[i] > matchThresh && matches_info.vmatch2[matches_info.vmatch1[i]] == i) {
+                cv::DMatch mt;
+                mt.queryIdx = i;
+                mt.trainIdx = matches_info.vmatch1[i];
+                matches_info.matches.push_back(mt);
+                matches.insert(std::make_pair(mt.queryIdx, mt.trainIdx));
+            }
+        }
+        for (int i = 0; i < matches_info.match2counts; i++) {
+            if (matches_info.vmatch2[i] > -1 && matches_info.vmscore2[i] > matchThresh && matches_info.vmatch1[matches_info.vmatch2[i]] == i) {
+                cv::DMatch mt;
+                mt.queryIdx = matches_info.vmatch2[i];
+                mt.trainIdx = i;
+                if (matches.find(std::make_pair(mt.queryIdx, mt.trainIdx)) == matches.end()) {
+                    matches_info.matches.push_back(mt);
+                }
+            }
+        }
+
+        ////////////////////////
+
+        int nmatches = matches_info.matches.size();
+
+        vMatchedPairs.clear();
+        vMatchedPairs.reserve(nmatches);
+
+        for (int i = 0; i < matches_info.match1counts; ++i) {
+            if(matches_info.vmatch1[i] < 0)
+                continue;
+            vMatchedPairs.push_back(make_pair(i, matches_info.vmatch1[i]));
+        }
+
+        return nmatches;
+    }
+
 }

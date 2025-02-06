@@ -40,6 +40,8 @@ namespace SELMSLAM {
         // If it's not, it will raise an exception, indicating that the image doesn't have the expected data type.
         assert(image.type() == CV_8UC1);
 
+        cout << "B.B In BBSPExtractor::operator. Before ceating an instance of BBSuperPoint. BBSUPERPOINT_WEIGHT_APTH: " << BBSUPERPOINT_WEIGHT_PATH << endl;
+
         BBSuperPoint sp(BBSUPERPOINT_WEIGHT_PATH); // Culprit
         sp.featureExtractor(_image, cv::Mat(), _keypoints, _descriptors);
 

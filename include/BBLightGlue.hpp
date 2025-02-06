@@ -78,6 +78,15 @@ namespace SELMSLAM {
         // std::vector<uchar> inliers_mask; // mask to identify geometrically consistent matches. It can be used to filter out unreliable matches based on some criteria.
         // int num_inliers; // the number of geometrically consistent matches. This is likely computed based on the inliers mask.
         // cv::Mat H; // an estimated transformation, such as a homography matrix, between the source and destination images.
+
+        // These four vectors store the values pointed to by the match1, match2, mscore1, and mscore2 pointers.
+        // Since I encountered issues accessing the values in these four arrays outside of the class where the arrays get values
+        // I stored the array values in hese four data structure.
+        std::vector<int> vmatch1;
+        std::vector<int> vmatch2;
+
+        std::vector<float> vmscore1;
+        std::vector<float> vmscore2;
     };
 
     // I cannot inherit from any class (e.g. ORBMatcher class) in ORB-SLAM3 because it is not designed to support class inheritence.

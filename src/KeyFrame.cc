@@ -796,9 +796,8 @@ bool KeyFrame::UnprojectStereo(int i, Eigen::Vector3f &x3D)
         return false;
 }
 
-float KeyFrame::ComputeSceneMedianDepth(const int q)
-{
-    if(N==0)
+float KeyFrame::ComputeSceneMedianDepth(const int q) {
+    if(N == 0)
         return -1.0;
 
     vector<MapPoint*> vpMapPoints;
@@ -816,9 +815,8 @@ float KeyFrame::ComputeSceneMedianDepth(const int q)
     vDepths.reserve(N);
     Eigen::Matrix<float,1,3> Rcw2 = Rcw.row(2);
     float zcw = tcw(2);
-    for(int i=0; i<N; i++) {
-        if(mvpMapPoints[i])
-        {
+    for(int i = 0; i < N; i++) {
+        if(mvpMapPoints[i]) {
             MapPoint* pMP = mvpMapPoints[i];
             Eigen::Vector3f x3Dw = pMP->GetWorldPos();
             float z = Rcw2.dot(x3Dw) + zcw;
@@ -828,7 +826,7 @@ float KeyFrame::ComputeSceneMedianDepth(const int q)
 
     sort(vDepths.begin(),vDepths.end());
 
-    return vDepths[(vDepths.size()-1)/q];
+    return vDepths[(vDepths.size() - 1) / q];
 }
 
 void KeyFrame::SetNewBias(const IMU::Bias &b)

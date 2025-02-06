@@ -90,9 +90,13 @@ namespace SELMSLAM {
         Ort::RunOptions run_options;
 
         // The SuperPoint model is run using the ONNX Runtime, and keypoints and descriptors are extracted from the model's output tensors.
+
+        cout << endl << "B.B In BBSuperPoint::featureExtractor. Before running SuperPoint model." << endl;
         TIC
         std::vector<Ort::Value> outputs = extractorSession.Run(run_options, input_names, &inputTensor, 1, output_names, 3);
         TOC
+
+        cout << endl << "B.B In BBSuperPoint::featureExtractor. After running SuperPoint model." << endl;
 
         std::vector<int64_t> kpshape = outputs[0].GetTensorTypeAndShapeInfo().GetShape();
         int64* kp = (int64*)outputs[0].GetTensorMutableData<void>();

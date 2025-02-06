@@ -82,12 +82,18 @@ namespace ORB_SLAM3 {
 
     bool Pinhole::ReconstructWithTwoViews(const std::vector<cv::KeyPoint>& vKeys1, const std::vector<cv::KeyPoint>& vKeys2, const std::vector<int> &vMatches12,
                                  Sophus::SE3f &T21, std::vector<cv::Point3f> &vP3D, std::vector<bool> &vbTriangulated){
-        if(!tvr){
+        
+        if(!tvr) { // B.B TwoViewReconstruction* tvr
+            // B.B camera's intrinsic matrix containing its focal lengths and principal point
             Eigen::Matrix3f K = this->toK_();
+
+            // B.B handle the triangulation process of reconstructing 3D points from two views.
             tvr = new TwoViewReconstruction(K);
+
         }
 
-        return tvr->Reconstruct(vKeys1,vKeys2,vMatches12,T21,vP3D,vbTriangulated);
+        // B.B performs the actual computation to triangulate 3D points from the two sets of keypoints and their matches.
+        return tvr->Reconstruct(vKeys1, vKeys2, vMatches12, T21, vP3D, vbTriangulated);
     }
 
 

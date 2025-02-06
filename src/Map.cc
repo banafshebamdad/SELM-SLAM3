@@ -21,6 +21,8 @@
 
 #include<mutex>
 
+#include "BBLogger.hpp" // B.B
+
 namespace ORB_SLAM3
 {
 
@@ -57,22 +59,28 @@ Map::~Map()
     mvpKeyFrameOrigins.clear();
 }
 
-void Map::AddKeyFrame(KeyFrame *pKF)
-{
+void Map::AddKeyFrame(KeyFrame *pKF) {
     unique_lock<mutex> lock(mMutexMap);
+
+    // B.B Checks if the set mspKeyFrames, which holds all the keyframes in the map, is empty. 
+    // B.B This is the first time a keyframe is being added if true.
     if(mspKeyFrames.empty()){
-        cout << "First KF:" << pKF->mnId << "; Map init KF:" << mnInitKFid << endl;
+        cout << "First KF: " << pKF->mnId << "; Map init KF: " << mnInitKFid << endl;
         mnInitKFid = pKF->mnId;
-        mpKFinitial = pKF;
-        mpKFlowerID = pKF;
+        mpKFinitial = pKF; // B.B the initial keyframe in the map.
+        mpKFlowerID = pKF; // B.B eyframe with the lowest ID in the map
     }
-    mspKeyFrames.insert(pKF);
-    if(pKF->mnId>mnMaxKFid)
-    {
-        mnMaxKFid=pKF->mnId;
+
+    BBLogger::getInstance().log("\nMap::AddKeyFrame: # KFs in Map before inserting KF: " + std::to_string(mspKeyFrames.size()));
+
+    mspKeyFrames.insert(pKF); // B.B holds all the keyframes in the map
+
+    BBLogger::getInstance().log("\tMap::AddKeyFrame: after: " + std::to_string(mspKeyFrames.size()));
+
+    if(pKF->mnId > mnMaxKFid) {
+        mnMaxKFid = pKF->mnId;
     }
-    if(pKF->mnId<mpKFlowerID->mnId)
-    {
+    if(pKF->mnId < mpKFlowerID->mnId) {
         mpKFlowerID = pKF;
     }
 }

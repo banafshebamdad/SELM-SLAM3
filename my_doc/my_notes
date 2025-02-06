@@ -7,3 +7,13 @@ To calculate pMP->mTrackProjX and MP->mTrackProjY, the following steps are perfo
 	3) Set values
 		pMP->mTrackProjX = uv(0);
 		pMP->mTrackProjY = uv(1);
+pMP->mTrackDepth is the distance of the MapPoint from the camera center (in camera coordinate system)
+	const float pMP->mTrackDepth = Pc_dist = Pc.norm(); 
+
+# 
+# velocity calculation [4x4] in Tracking::Track()
+#
+
+To calculate the velocity of the camera's motion based on the transformation between the current and last frames
+	Sophus::SE3f LastTwc = mLastFrame.GetPose().inverse(); [4x3]
+	mVelocity [4x4] = mCurrentFrame.GetPose() [3x4] * LastTwc; [4x3]

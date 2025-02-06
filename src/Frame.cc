@@ -210,6 +210,7 @@ Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeSt
 
 // B.B Achtung
 // B.B Verifie-toi pourquoi la valeur de mCurrentFrame.N=0.
+// B.B RGB-D configuration
 Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeStamp, ORBextractor* extractor,ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth, GeometricCamera* pCamera,Frame* pPrevF, const IMU::Calib &ImuCalib)
     :mpcpi(NULL),mpORBvocabulary(voc),mpORBextractorLeft(extractor),mpORBextractorRight(static_cast<ORBextractor*>(NULL)),
      mTimeStamp(timeStamp), mK(K.clone()), mK_(Converter::toMatrix3f(K)),mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth),
@@ -328,7 +329,7 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
 }
 
 // Added by Banafshe Bamdad
-
+// B.B RGB-D configuration
 Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeStamp, SELMSLAM::BBSPExtractor* extractor, ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth, GeometricCamera* pCamera, Frame* pPrevF, const IMU::Calib &ImuCalib)
     :mpcpi(NULL), mpORBvocabulary(voc), mpBBSPExtractorLeft(extractor), mpBBSPExtractorRight(static_cast<BBSPExtractor*>(NULL)),
      mTimeStamp(timeStamp), mK(K.clone()), mK_(Converter::toMatrix3f(K)),mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth),
@@ -350,22 +351,29 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
     mvInvLevelSigma2 = myVector;
 
     // SuperPoint extraction
-#ifdef REGISTER_TIMES
-    std::chrono::steady_clock::time_point time_StartExtORB = std::chrono::steady_clock::now();
-#endif
+    #ifdef REGISTER_TIMES
+        std::chrono::steady_clock::time_point time_StartExtORB = std::chrono::steady_clock::now();
+    #endif
 
     // B.B
     BBExtractSP(0, imGray, 0, 0);
 
-#ifdef REGISTER_TIMES
-    std::chrono::steady_clock::time_point time_EndExtORB = std::chrono::steady_clock::now();
-
-    mTimeORB_Ext = std::chrono::duration_cast<std::chrono::duration<double,std::milli> >(time_EndExtORB - time_StartExtORB).count();
-#endif
+    #ifdef REGISTER_TIMES
+        std::chrono::steady_clock::time_point time_EndExtORB = std::chrono::steady_clock::now();
+        mTimeORB_Ext = std::chrono::duration_cast<std::chrono::duration<double,std::milli> >(time_EndExtORB - time_StartExtORB).count();
+    #endif
 
 
     N = mvKeys.size();
 
+    // B.B to log the number of features extracted for each frame
+    std::string bbLogFilePath = std::string(BBLOGFILE_PATH) + "BB_num_extracted_features.log";
+    std::ofstream BBLogFile(bbLogFilePath, std::ios::app);
+    if (BBLogFile.is_open()) {
+        BBLogFile << endl << "FrameId: " << mnId << "\t# Features: " << N;
+        BBLogFile.close();
+    }
+    
     cout << endl << "B.B In Frame::Frame, after extracting ORB/SP features. mvKeys size=" << N << endl;
 
     if(mvKeys.empty()) {
@@ -440,6 +448,7 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
 }
 // B.B jusqu'ici
 
+// B.B constructor for Monocular configuration
 Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor* extractor,ORBVocabulary* voc, GeometricCamera* pCamera, cv::Mat &distCoef, const float &bf, const float &thDepth, Frame* pPrevF, const IMU::Calib &ImuCalib)
     :mpcpi(NULL),mpORBvocabulary(voc),mpORBextractorLeft(extractor),mpORBextractorRight(static_cast<ORBextractor*>(NULL)),
      mTimeStamp(timeStamp), mK(static_cast<Pinhole*>(pCamera)->toK()), mK_(static_cast<Pinhole*>(pCamera)->toK_()), mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth),
@@ -535,6 +544,111 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor* extra
     mpMutexImu = new std::mutex();
 }
 
+// Added by Banafshe Bamdad
+// B.B constructor for Monocular configuration
+Frame::Frame(const cv::Mat &imGray, const double &timeStamp, SELMSLAM::BBSPExtractor* extractor,ORBVocabulary* voc, GeometricCamera* pCamera, cv::Mat &distCoef, const float &bf, const float &thDepth, Frame* pPrevF, const IMU::Calib &ImuCalib)
+    :mpcpi(NULL),mpORBvocabulary(voc),mpBBSPExtractorLeft(extractor),mpBBSPExtractorRight(static_cast<BBSPExtractor*>(NULL)),
+     mTimeStamp(timeStamp), mK(static_cast<Pinhole*>(pCamera)->toK()), mK_(static_cast<Pinhole*>(pCamera)->toK_()), mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth),
+     mImuCalib(ImuCalib), mpImuPreintegrated(NULL),mpPrevFrame(pPrevF),mpImuPreintegratedFrame(NULL), mpReferenceKF(static_cast<KeyFrame*>(NULL)), mbIsSet(false), mbImuPreintegrated(false), mpCamera(pCamera),
+     mpCamera2(nullptr), mbHasPose(false), mbHasVelocity(false)
+{
+    // Frame ID
+    mnId = nNextId++;
+
+    // Scale Level Info
+    // B.B Since I want to remove the following information, I initialized them with constant values.
+    std::vector<float> myVector(1, 1.0f);
+    mnScaleLevels = 1;
+    mfScaleFactor = 1.0;
+    mfLogScaleFactor = 0.0;
+    mvScaleFactors = myVector;
+    mvInvScaleFactors = myVector;
+    mvLevelSigma2 = myVector;
+    mvInvLevelSigma2 = myVector;
+
+    // ORB extraction
+    #ifdef REGISTER_TIMES
+        std::chrono::steady_clock::time_point time_StartExt = std::chrono::steady_clock::now();
+    #endif
+        BBExtractSP(0, imGray, 0, 1000);
+    #ifdef REGISTER_TIMES
+        std::chrono::steady_clock::time_point time_EndExt = std::chrono::steady_clock::now();
+
+        mTimeORB_Ext = std::chrono::duration_cast<std::chrono::duration<double,std::milli> >(time_EndExt - time_StartExt).count();
+    #endif
+
+
+    N = mvKeys.size();
+    if(mvKeys.empty())
+        return;
+
+    // B.B to log the number of features extracted for each frame
+    std::string bbLogFilePath = std::string(BBLOGFILE_PATH) + "BB_num_extracted_features.log";
+    std::ofstream BBLogFile(bbLogFilePath, std::ios::app);
+    if (BBLogFile.is_open()) {
+        BBLogFile << endl << "FrameId: " << mnId << "\t# Features: " << N;
+        BBLogFile.close();
+    }
+
+    // B.B Corrects keypoints for lens distortion
+    UndistortKeyPoints();
+
+    // Set no stereo information
+    // B.B no depth or right keypoints
+    mvuRight = vector<float>(N, -1);
+    mvDepth = vector<float>(N,-1);
+    mnCloseMPs = 0;
+
+    mvpMapPoints = vector<MapPoint*>(N, static_cast<MapPoint*>(NULL));
+
+    mmProjectPoints.clear();// = map<long unsigned int, cv::Point2f>(N, static_cast<cv::Point2f>(NULL));
+    mmMatchedInImage.clear();
+
+    mvbOutlier = vector<bool>(N, false);
+
+    // This is done only for the first Frame (or after a change in the calibration)
+    if(mbInitialComputations) {
+        ComputeImageBounds(imGray);
+
+        mfGridElementWidthInv = static_cast<float>(FRAME_GRID_COLS) / static_cast<float>(mnMaxX - mnMinX);
+        mfGridElementHeightInv = static_cast<float>(FRAME_GRID_ROWS) / static_cast<float>(mnMaxY - mnMinY);
+
+        fx = static_cast<Pinhole*>(mpCamera)->toK().at<float>(0, 0);
+        fy = static_cast<Pinhole*>(mpCamera)->toK().at<float>(1, 1);
+        cx = static_cast<Pinhole*>(mpCamera)->toK().at<float>(0, 2);
+        cy = static_cast<Pinhole*>(mpCamera)->toK().at<float>(1, 2);
+        invfx = 1.0f / fx;
+        invfy = 1.0f / fy;
+
+        mbInitialComputations=false;
+    }
+
+
+    mb = mbf / fx;
+
+    //Set no stereo fisheye information
+    Nleft = -1;
+    Nright = -1;
+    mvLeftToRightMatch = vector<int>(0);
+    mvRightToLeftMatch = vector<int>(0);
+    mvStereo3Dpoints = vector<Eigen::Vector3f>(0);
+    monoLeft = -1;
+    monoRight = -1;
+
+    // B.B Assigns keypoints to a grid for efficient matching
+    AssignFeaturesToGrid();
+
+    // B.B If a previous frame is provided and has velocity, the current frame's velocity is set to match it; otherwise, it's initialized to zero.
+    if(pPrevF) {
+        if(pPrevF->HasVelocity()) {
+            SetVelocity(pPrevF->GetVelocity());
+        }
+    } else {
+        mVw.setZero();
+    }
+
+    mpMutexImu = new std::mutex();
+}
 
 /**
  * B.B
@@ -590,7 +704,7 @@ void Frame::AssignFeaturesToGrid() {
 }
 
 void Frame::ExtractORB(int flag, const cv::Mat &im, const int x0, const int x1) {
-    vector<int> vLapping = {x0,x1};
+    vector<int> vLapping = {x0, x1};
     if(flag == 0) {
         // B.B mpORBextractorLeft: a pointer to an object
         // B.B (*mpORBextractorLeft): accessing the object that the pointer is pointing to call a method or access a member of that object.
@@ -639,6 +753,8 @@ void Frame::BBExtractSP(int flag, const cv::Mat &im, const int x0, const int x1)
 
     vector<int> vLapping = {x0, x1};
     if(flag == 0) {
+
+        cout << "B.B Before extracting SuperPoints." << endl;
 
         monoLeft = (*mpBBSPExtractorLeft)(im, cv::Mat(), mvKeys, mDescriptors, vLapping);
 
@@ -862,8 +978,8 @@ bool Frame::isInFrustum(MapPoint *pMP, float viewingCosLimit) {
         pMP -> mnTrackScaleLevel = -1;
         pMP -> mnTrackScaleLevelR = -1;
 
-        pMP->mbTrackInView = isInFrustumChecks(pMP,viewingCosLimit);
-        pMP->mbTrackInViewR = isInFrustumChecks(pMP,viewingCosLimit,true);
+        pMP->mbTrackInView = isInFrustumChecks(pMP, viewingCosLimit);
+        pMP->mbTrackInViewR = isInFrustumChecks(pMP, viewingCosLimit,true);
 
         return pMP->mbTrackInView || pMP->mbTrackInViewR;
     }
@@ -1043,37 +1159,46 @@ void Frame::ComputeBoW() {
     }
 }
 
-void Frame::UndistortKeyPoints()
-{
-    if(mDistCoef.at<float>(0)==0.0)
-    {
-        mvKeysUn=mvKeys;
-        return;
+// B.B To correct the distortion in keypoints detected in an image frame
+// B.B The distortion is usually caused by the camera lens, and it needs to be corrected for accurate feature matching and map reconstruction.
+void Frame::UndistortKeyPoints() {
+
+    /**
+     * B.B
+     * Checks if the first coefficient of the distortion parameters is zero. 
+     * A zero value typically implies that there is no distortion in the camera lens, or the distortion is negligible.
+    */
+    if(mDistCoef.at<float>(0) == 0.0) {
+        // B.B assigns the original keypoints to the undistorted keypoints vector without any changes.
+        mvKeysUn = mvKeys;
+        return; // B.B no undistortion is needed
     }
 
     // Fill matrix with points
-    cv::Mat mat(N,2,CV_32F);
+    cv::Mat mat(N, 2, CV_32F);
 
-    for(int i=0; i<N; i++)
-    {
-        mat.at<float>(i,0)=mvKeys[i].pt.x;
-        mat.at<float>(i,1)=mvKeys[i].pt.y;
+    for(int i = 0; i < N; i++) {
+        mat.at<float>(i, 0) = mvKeys[i].pt.x;
+        mat.at<float>(i, 1) = mvKeys[i].pt.y;
     }
 
     // Undistort points
-    mat=mat.reshape(2);
-    cv::undistortPoints(mat,mat, static_cast<Pinhole*>(mpCamera)->toK(),mDistCoef,cv::Mat(),mK);
-    mat=mat.reshape(1);
+    mat = mat.reshape(2);
+    // B.B corrects the distortion in the keypoints using the camera's intrinsic parameters and the distortion coefficients. 
+    // B.B The corrected points are stored back in the same matrix.
+    cv::undistortPoints(mat, mat, static_cast<Pinhole*>(mpCamera)->toK(), mDistCoef, cv::Mat(), mK);
+
+    // B.B Reshapes the matrix back to its original shape after undistortion.
+    mat = mat.reshape(1);
 
 
     // Fill undistorted keypoint vector
     mvKeysUn.resize(N);
-    for(int i=0; i<N; i++)
-    {
+    for(int i = 0; i < N; i++) {
         cv::KeyPoint kp = mvKeys[i];
-        kp.pt.x=mat.at<float>(i,0);
-        kp.pt.y=mat.at<float>(i,1);
-        mvKeysUn[i]=kp;
+        kp.pt.x = mat.at<float>(i, 0);
+        kp.pt.y = mat.at<float>(i, 1);
+        mvKeysUn[i] = kp;
     }
 
 }
@@ -1293,7 +1418,7 @@ void Frame::ComputeStereoMatches() {
 */
 void Frame::ComputeStereoFromRGBD(const cv::Mat &imDepth) {
 
-    // B.B  initialized with a size of N
+    // B.B initialized with a size of N
     mvuRight = vector<float>(N, -1);
     mvDepth = vector<float>(N, -1);
 
@@ -1519,8 +1644,7 @@ bool Frame::isInFrustumChecks(MapPoint *pMP, float viewingCosLimit, bool bRight)
         mR = Rrl * mRcw;
         mt = Rrl * mtcw + trl;
         twc = mRwc * mTlr.translation() + mOw;
-    }
-    else{
+    } else {
         mR = mRcw;
         mt = mtcw;
         twc = mOw;
@@ -1532,7 +1656,7 @@ bool Frame::isInFrustumChecks(MapPoint *pMP, float viewingCosLimit, bool bRight)
     const float &PcZ = Pc(2);
 
     // Check positive depth
-    if(PcZ<0.0f)
+    if(PcZ < 0.0f)
         return false;
 
     // Project in image and check it is not outside

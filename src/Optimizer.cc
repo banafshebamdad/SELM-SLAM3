@@ -113,8 +113,7 @@ void Optimizer::BundleAdjustment(const vector<KeyFrame *> &vpKFs, const vector<M
 
     // Set KeyFrame vertices
 
-    for(size_t i=0; i<vpKFs.size(); i++)
-    {
+    for(size_t i = 0; i < vpKFs.size(); i++) {
         KeyFrame* pKF = vpKFs[i];
         if(pKF->isBad())
             continue;
@@ -282,20 +281,16 @@ void Optimizer::BundleAdjustment(const vector<KeyFrame *> &vpKFs, const vector<M
 
     // Recover optimized data
     //Keyframes
-    for(size_t i=0; i<vpKFs.size(); i++)
-    {
+    for(size_t i = 0; i < vpKFs.size(); i++) {
         KeyFrame* pKF = vpKFs[i];
         if(pKF->isBad())
             continue;
         g2o::VertexSE3Expmap* vSE3 = static_cast<g2o::VertexSE3Expmap*>(optimizer.vertex(pKF->mnId));
 
         g2o::SE3Quat SE3quat = vSE3->estimate();
-        if(nLoopKF==pMap->GetOriginKF()->mnId)
-        {
+        if(nLoopKF == pMap->GetOriginKF()->mnId) {
             pKF->SetPose(Sophus::SE3f(SE3quat.rotation().cast<float>(), SE3quat.translation().cast<float>()));
-        }
-        else
-        {
+        } else {
             pKF->mTcwGBA = Sophus::SE3d(SE3quat.rotation(),SE3quat.translation()).cast<float>();
             pKF->mnBAGlobalForKF = nLoopKF;
 
@@ -303,8 +298,7 @@ void Optimizer::BundleAdjustment(const vector<KeyFrame *> &vpKFs, const vector<M
             Sophus::SE3f mTcGBA_c = pKF->mTcwGBA * mTwc;
             Eigen::Vector3f vector_dist =  mTcGBA_c.translation();
             double dist = vector_dist.norm();
-            if(dist > 1)
-            {
+            if(dist > 1) {
                 int numMonoBadPoints = 0, numMonoOptPoints = 0;
                 int numStereoBadPoints = 0, numStereoOptPoints = 0;
                 vector<MapPoint*> vpMonoMPsOpt, vpStereoMPsOpt;
@@ -323,8 +317,7 @@ void Optimizer::BundleAdjustment(const vector<KeyFrame *> &vpKFs, const vector<M
                     if(pMP->isBad())
                         continue;
 
-                    if(e->chi2()>5.991 || !e->isDepthPositive())
-                    {
+                    if(e->chi2() > 5.991 || !e->isDepthPositive()) {
                         numMonoBadPoints++;
 
                     }
@@ -336,8 +329,7 @@ void Optimizer::BundleAdjustment(const vector<KeyFrame *> &vpKFs, const vector<M
 
                 }
 
-                for(size_t i2=0, iend=vpEdgesStereo.size(); i2<iend;i2++)
-                {
+                for(size_t i2=0, iend=vpEdgesStereo.size(); i2<iend;i2++) { 
                     g2o::EdgeStereoSE3ProjectXYZ* e = vpEdgesStereo[i2];
                     MapPoint* pMP = vpMapPointEdgeStereo[i2];
                     KeyFrame* pKFedge = vpEdgeKFMono[i2];
@@ -365,8 +357,7 @@ void Optimizer::BundleAdjustment(const vector<KeyFrame *> &vpKFs, const vector<M
     }
 
     //Points
-    for(size_t i=0; i<vpMP.size(); i++)
-    {
+    for(size_t i=0; i<vpMP.size(); i++) {
         if(vbNotIncludedMP[i])
             continue;
 
@@ -385,8 +376,8 @@ void Optimizer::BundleAdjustment(const vector<KeyFrame *> &vpKFs, const vector<M
         {
             pMP->mPosGBA = vPoint->estimate().cast<float>();
             pMP->mnBAGlobalForKF = nLoopKF;
-        }
-    }
+        } // B.B if(nLoopKF==pMap->GetOriginKF()->mnId) else
+    } // B.B for(size_t i=0; i<vpMP.size(); i++)
 }
 
 void Optimizer::FullInertialBA(Map *pMap, int its, const bool bFixLocal, const long unsigned int nLoopId, bool *pbStopFlag, bool bInit, float priorG, float priorA, Eigen::VectorXd *vSingVal, bool *bHess)

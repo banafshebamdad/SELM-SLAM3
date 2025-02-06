@@ -499,7 +499,9 @@ namespace ORB_SLAM3
         if(torch::cuda::is_available()) {
             std::cout << " Running superpoint processing with CUDA" << std::endl;
         }
-        std::cout << " ...superpoint detector initialization COMPLETED!" << std::endl;
+        std::cout << " ...superpoint detector initialization COMPLETED!";
+
+        // cin.get();
 
         mvScaleFactor.resize(nlevels);
         mvLevelSigma2.resize(nlevels);

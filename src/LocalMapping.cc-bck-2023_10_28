@@ -67,7 +67,7 @@ void LocalMapping::Run() {
     while(1) {
 
         cout << endl << "B.B On top of the Run method of '''Local Mapping''' thread. press Enter...";
-        cin.get();
+        //cin.get();
 
         // Tracking will see that Local Mapping is busy
         SetAcceptKeyFrames(false);
@@ -82,12 +82,12 @@ void LocalMapping::Run() {
 #endif
             // BoW conversion and insertion in Map
             cout << endl << "B.B On In the Run method of '''Local Mapping''' thread, before ProcessNewKeyFrame(). press Enter...";
-            cin.get();
+            //cin.get();
             
             ProcessNewKeyFrame();
 
             cout << endl << "B.B In the Run method of '''Local Mapping''' thread, after ProcessNewKeyFrame(). press Enter...";
-            cin.get();
+            //cin.get();
 #ifdef REGISTER_TIMES
             std::chrono::steady_clock::time_point time_EndProcessKF = std::chrono::steady_clock::now();
 
@@ -302,14 +302,14 @@ void LocalMapping::ProcessNewKeyFrame() {
     }
 
     cout << "B.B in LocalMapping::ProcessNewKeyFrame. before mpCurrentKeyFrame->ComputeBoW(). Press Enter";
-    cin.get();
+    //cin.get();
 
     // Compute Bags of Words structures
     // B.B to match keyframes and map points, crucial for place recognition and loop closure.
     mpCurrentKeyFrame->ComputeBoW(); // B.B commented out by me
     
     cout << "B.B in LocalMapping::ProcessNewKeyFrame. after mpCurrentKeyFrame->ComputeBoW(). Press Enter";
-    cin.get();
+    //cin.get();
 
     // Associate MapPoints to the new keyframe and update normal and descriptor
     // B.B 3D points in the environment that are observed in the keyframe associated with the mpCurrentKeyFrame. 

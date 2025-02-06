@@ -2,6 +2,8 @@
 cmake_minimum_required(VERSION 2.8)
 project(ORB_SLAM3)
 
+### Start 1: SuperSLAM config
+
 # Get cuDNN version
 message("1. ::: Banafshe is asking for the path to cudnn :::")
 message("${CUDNN_INCLUDE_PATH}")
@@ -31,6 +33,9 @@ message("--- 2. B.B ---")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
 # include_directories(${TORCH_INCLUDE_DIRS})
 ###
+
+### End 1: SuperSLAM config
+
 
 IF(NOT CMAKE_BUILD_TYPE)
   SET(CMAKE_BUILD_TYPE Release)
@@ -192,6 +197,9 @@ include/BBSPExtractor.hpp
 
 src/BBLGMatcher.cpp
 include/BBLGMatcher.hpp
+
+src/BBLogger.cpp
+include/BBLogger.hpp
 )
 
 add_subdirectory(Thirdparty/g2o)
@@ -213,6 +221,13 @@ if(DEFINED BBLIGHTGLUE_WEIGHT_PATH)
     message("Macro BBLIGHTGLUE_WEIGHT_PATH is defined with value: ${BBLIGHTGLUE_WEIGHT_PATH}")
    #  to make a value from CMake's configuration available to C++ source code as a preprocessor macro
     target_compile_definitions(${PROJECT_NAME} PRIVATE BBLIGHTGLUE_WEIGHT_PATH="${BBLIGHTGLUE_WEIGHT_PATH}")
+endif()
+
+# Banafshe bamdad
+if(DEFINED BBLOGFILE_PATH)
+    message("Macro BBLOGFILE_PATH is defined with value: ${BBLOGFILE_PATH}")
+   #  to make a value from CMake's configuration available to C++ source code as a preprocessor macro
+    target_compile_definitions(${PROJECT_NAME} PRIVATE BBLOGFILE_PATH="${BBLOGFILE_PATH}")
 endif()
 
 # B.B added ${PYTHON_LIBRARIES}
@@ -292,10 +307,17 @@ endif()
 #     target_link_libraries(stereo_realsense_D435i ${PROJECT_NAME})
 # endif()
 
-#Monocular examples
-# Commented by B.B
-# set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/Monocular)
+# Monocular examples
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/Monocular)
 
+# Added by Banafshe Bamdad
+add_executable(mono_selm Examples/Monocular/mono_selm.cc)
+target_link_libraries(mono_selm ${PROJECT_NAME}) 
+
+add_executable(mono_Incrowd-VI Examples/Monocular/mono_Incrowd-VI.cc)
+target_link_libraries(mono_Incrowd-VI ${PROJECT_NAME})
+
+# Commented by B.B
 # add_executable(mono_tum
 #         Examples/Monocular/mono_tum.cc)
 # target_link_libraries(mono_tum ${PROJECT_NAME})

@@ -756,30 +756,44 @@ namespace ORB_SLAM3
         return nmatches;
     }
 
-    int ORBmatcher::SearchForInitialization(Frame &F1, Frame &F2, vector<cv::Point2f> &vbPrevMatched, vector<int> &vnMatches12, int windowSize)
-    {
+    /**
+     * B.B
+     * vnMatches12: to store the indices of matches
+     * windowSize: the search area around the keypoints
+    */
+    int ORBmatcher::SearchForInitialization(Frame &F1, Frame &F2, vector<cv::Point2f> &vbPrevMatched, vector<int> &vnMatches12, int windowSize) {
         //DBG_PRINTF("%s \n", __PRETTY_FUNCTION__);
-        int nmatches=0;
-        vnMatches12 = vector<int>(F1.mvKeysUn.size(),-1);
+        int nmatches = 0;
+        vnMatches12 = vector<int>(F1.mvKeysUn.size(), -1);
 
+        // B.B Rotation Histogram
+        // B.B HISTO_LENGTH: the number of bins in the histogram.
+        // B.B Prepares a histogram for keypoint orientations to ensure consistent rotation between matches
         vector<int> rotHist[HISTO_LENGTH];
-        for(int i=0;i<HISTO_LENGTH;i++)
+        for(int i = 0; i < HISTO_LENGTH; i++)
             rotHist[i].reserve(500);
-        const float factor = 1.0f/HISTO_LENGTH;
+        
+        const float factor = 1.0f / HISTO_LENGTH;
 
-        vector<int> vMatchedDistance(F2.mvKeysUn.size(),INT_MAX);
-        vector<int> vnMatches21(F2.mvKeysUn.size(),-1);
+        // B.B Track Matched Distances
+        // B.B smallest distance for each keypoint in F2 to any keypoint in F1
+        vector<int> vMatchedDistance(F2.mvKeysUn.size(), INT_MAX);
 
-        DBG_PRINTF("Num keypoints F1: %d, num keypoints F2: %d\n",F1.mvKeysUn.size(),F2.mvKeysUn.size());
+        // B.B reciprocal matches
+        vector<int> vnMatches21(F2.mvKeysUn.size(), -1);
 
-        for(size_t i1=0, iend1=F1.mvKeysUn.size(); i1<iend1; i1++)
-        {
+        DBG_PRINTF("Num keypoints F1: %d, num keypoints F2: %d\n", F1.mvKeysUn.size(), F2.mvKeysUn.size());
+
+        for(size_t i1 = 0, iend1 = F1.mvKeysUn.size(); i1 < iend1; i1++) {
             cv::KeyPoint kp1 = F1.mvKeysUn[i1];
             int level1 = kp1.octave;
-            if(level1>0)
+
+            // B.B Ignores keypoints that are not in the base octave (level 0) to focus on the most prominent features.
+            if(level1 > 0)
                 continue;
 
-            vector<size_t> vIndices2 = F2.GetFeaturesInArea(vbPrevMatched[i1].x,vbPrevMatched[i1].y, windowSize,level1,level1);
+            // B.b Retrieves keypoints in F2 that are within a windowSize radius of the previously matched point corresponding to the current keypoint in F1.
+            vector<size_t> vIndices2 = F2.GetFeaturesInArea(vbPrevMatched[i1].x, vbPrevMatched[i1].y, windowSize, level1, level1);
 
             if(vIndices2.empty())
                 continue;
@@ -791,92 +805,96 @@ namespace ORB_SLAM3
             int bestIdx2 = -1;
 
             // TIC
-            for(vector<size_t>::iterator vit=vIndices2.begin(); vit!=vIndices2.end(); vit++)
-            {
+            // B.b Iterates over candidate keypoints in F2 to find the best match based on descriptor distance.
+            for(vector<size_t>::iterator vit=vIndices2.begin(); vit!=vIndices2.end(); vit++) {
                 size_t i2 = *vit;
 
                 cv::Mat d2 = F2.mDescriptors.row(i2);
 
                 cout << "B.B Line 788 ORBMatcher.cc. before calling ORBmatcher::DescriptorDistance. Press Enter..."; 
                 // cin.get();
-                float dist = DescriptorDistance(d1,d2);
+                // B.B Computes the distance between descriptors of keypoints in F1 and F2
+                float dist = DescriptorDistance(d1, d2);
 
-                if(vMatchedDistance[i2]<=dist)
+                if(vMatchedDistance[i2] <= dist)
                     continue;
 
-                if(dist<bestDist)
-                {
+                if(dist < bestDist) {
                     bestDist2=bestDist;
                     bestDist=dist;
                     bestIdx2=i2;
-                }
-                else if(dist<bestDist2)
-                {
+                } else if(dist<bestDist2) {
                     bestDist2=dist;
                 }
             }
             // TOC
 
-            if(bestDist<=TH_LOW)
-            {
-                if(bestDist<(float)bestDist2*mfNNratio)
-                {
-                    if(vnMatches21[bestIdx2]>=0)
-                    {
-                        vnMatches12[vnMatches21[bestIdx2]]=-1;
+            // B.b Checks if the best distance is below a threshold (TH_LOW), indicating a good match
+            if(bestDist <= TH_LOW) {
+
+                // B.B Applies the ratio test to filter out ambiguous matches
+                if(bestDist < (float)bestDist2 * mfNNratio) {
+                    if(vnMatches21[bestIdx2] >= 0) {
+                        vnMatches12[vnMatches21[bestIdx2]] = -1;
                         nmatches--;
                     }
                     vnMatches12[i1]=bestIdx2;
                     vnMatches21[bestIdx2]=i1;
                     vMatchedDistance[bestIdx2]=bestDist;
                     nmatches++;
-#ifdef ENABLE_CHECK_ORIENTATION
-                    if(mbCheckOrientation)
-                    {
-                        float rot = F1.mvKeysUn[i1].angle-F2.mvKeysUn[bestIdx2].angle;
-                        if(rot<0.0)
-                            rot+=360.0f;
-                        int bin = round(rot*factor);
-                        if(bin==HISTO_LENGTH)
-                            bin=0;
-                        assert(bin>=0 && bin<HISTO_LENGTH);
-                        rotHist[bin].push_back(i1);
-                    }
-#endif
+
+                    // B.b checks the orientation consistency of matches using the previously built rotation histogram
+                    #ifdef ENABLE_CHECK_ORIENTATION
+                        if(mbCheckOrientation)
+                        {
+                            float rot = F1.mvKeysUn[i1].angle-F2.mvKeysUn[bestIdx2].angle;
+                            if(rot<0.0)
+                                rot+=360.0f;
+                            int bin = round(rot*factor);
+                            if(bin==HISTO_LENGTH)
+                                bin=0;
+                            assert(bin>=0 && bin<HISTO_LENGTH);
+                            rotHist[bin].push_back(i1);
+                        }
+                    #endif
                 }
             }
 
         }
-#ifdef ENABLE_CHECK_ORIENTATION
-        if(mbCheckOrientation)
-        {
-            int ind1=-1;
-            int ind2=-1;
-            int ind3=-1;
-
-            ComputeThreeMaxima(rotHist,HISTO_LENGTH,ind1,ind2,ind3);
-
-            for(int i=0; i<HISTO_LENGTH; i++)
+        #ifdef ENABLE_CHECK_ORIENTATION
+            if(mbCheckOrientation)
             {
-                if(i==ind1 || i==ind2 || i==ind3)
-                    continue;
-                for(size_t j=0, jend=rotHist[i].size(); j<jend; j++)
+                int ind1=-1;
+                int ind2=-1;
+                int ind3=-1;
+
+                ComputeThreeMaxima(rotHist,HISTO_LENGTH,ind1,ind2,ind3);
+
+                for(int i=0; i<HISTO_LENGTH; i++)
                 {
-                    int idx1 = rotHist[i][j];
-                    if(vnMatches12[idx1]>=0)
+                    if(i==ind1 || i==ind2 || i==ind3)
+                        continue;
+                    for(size_t j=0, jend=rotHist[i].size(); j<jend; j++)
                     {
-                        vnMatches12[idx1]=-1;
-                        nmatches--;
+                        int idx1 = rotHist[i][j];
+                        if(vnMatches12[idx1]>=0)
+                        {
+                            vnMatches12[idx1]=-1;
+                            nmatches--;
+                        }
                     }
                 }
-            }
 
-        }
-#endif
+            }
+        #endif
+
+        // B.B Updates the vbPrevMatched vector with the new matches for the next iteration
         //Update prev matched
-        for(size_t i1=0, iend1=vnMatches12.size(); i1<iend1; i1++)
-            if(vnMatches12[i1]>=0)
-                vbPrevMatched[i1]=F2.mvKeysUn[vnMatches12[i1]].pt;
+        for(size_t i1 = 0, iend1 = vnMatches12.size(); i1 < iend1; i1++) {
+            if(vnMatches12[i1] >= 0) {
+                vbPrevMatched[i1] = F2.mvKeysUn[vnMatches12[i1]].pt;
+            }
+        }
 
         DBG_PRINTF("Returned nmatches: %d \n", nmatches);
         return nmatches;
@@ -1095,7 +1113,7 @@ namespace ORB_SLAM3
         // Find matches between not tracked keypoints
         // Matching speed-up by ORB Vocabulary
         // Compare only ORB that share the same node
-        int nmatches=0;
+        int nmatches = 0;
         vector<bool> vbMatched2(pKF2->N,false);
         vector<int> vMatches12(pKF1->N,-1);
 

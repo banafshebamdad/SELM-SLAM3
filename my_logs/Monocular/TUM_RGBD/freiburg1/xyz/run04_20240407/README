@@ -1,0 +1,4 @@
+Test after modification of LocalMapping::CreateNewMapPoints and implementation of the simple version of BBLGMatcher::SearchForTriangulation without fulfilling epipolar constraints.
+
+
+(nRedundantObservations > redundant_th * nMPs) condition in LocalMapping::KeyFrameCulling was active.

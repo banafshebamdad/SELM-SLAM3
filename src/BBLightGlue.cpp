@@ -693,7 +693,7 @@ namespace SELMSLAM {
     } // match method
 
     // 
-    // !!! AND OF ACHTUNG BLOCK !!!
+    // !!! END OF ACHTUNG BLOCK !!!
     // 
     // 
     // 
@@ -983,7 +983,7 @@ namespace SELMSLAM {
 
     } // match method
 
-    void BBLightGlue::perform_match (SELMSLAM::ImageFeatures features1, SELMSLAM::ImageFeatures features2, SELMSLAM::MatchesInfo &matches_info) {
+    void BBLightGlue::perform_match(SELMSLAM::ImageFeatures features1, SELMSLAM::ImageFeatures features2, SELMSLAM::MatchesInfo &matches_info) {
 
         // SELMSLAM::MatchesInfo matches_info;
 
@@ -1045,34 +1045,17 @@ namespace SELMSLAM {
 
         api.UpdateCUDAProviderOptions(cuda_options, keys.data(), values.data(), keys.size());
 
-        // Enable CUDA graph in CUDA provider options
-        // OrtCUDAProviderOptionsV2* cuda_options = nullptr;
-        // api.CreateCUDAProviderOptions(&cuda_options);
-        // std::unique_ptr<OrtCUDAProviderOptionsV2, decltype(api.ReleaseCUDAProviderOptions)> rel_cuda_options(cuda_options, api.ReleaseCUDAProviderOptions);
-        // std::vector<const char*> keys{"enable_cuda_graph", "device_id"};
-        // std::vector<const char*> values{"1", "0"};
-        // api.UpdateCUDAProviderOptions(rel_cuda_options.get(), keys.data(), values.data(), 1);
-
         Ort::Env env(ORT_LOGGING_LEVEL_FATAL, "BBLightGlue");
 
         Ort::SessionOptions sessionOptions;
 
         api.SessionOptionsAppendExecutionProvider_CUDA_V2(sessionOptions, cuda_options);
-        // api.SessionOptionsAppendExecutionProvider_CUDA_V2(static_cast<OrtSessionOptions*>(sessionOptions), rel_cuda_options.get());
-
-
-        // sessionOptions.SetIntraOpNumThreads(1); // CHECK
-        // sessionOptions.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL); // CHECK
-
 
         // 
         // Load the BBLightGlue network
         // 
 
         static Ort::Session session(env, this->m_modelPath.c_str(), sessionOptions);
-        // ??? OrtAllocatorType::OrtArenaAllocator or OrtDeviceAllocator
-
-        // Ort::MemoryInfo memoryInfo("Cuda", OrtAllocatorType::OrtArenaAllocator, 0, OrtMemTypeDefault);
         Ort::MemoryInfo memoryInfo("Cuda", OrtAllocatorType::OrtDeviceAllocator, 0, OrtMemTypeDefault);
         Ort::Allocator cuda_allocator(session, memoryInfo);
 
@@ -1142,9 +1125,6 @@ namespace SELMSLAM {
         cout << endl << "B.B in Perform matcher method. the size of outputs is: " << outputs.size() << endl;
 
         // Allocate host memory for the output tensors
-        // 
-        // test test test
-        // 
         std::vector<int64_t> match1shape  = outputs[0].GetTensorTypeAndShapeInfo().GetShape();
         std::vector<int64_t> match2shape  = outputs[1].GetTensorTypeAndShapeInfo().GetShape();
         std::vector<int64_t> mscoreshape1 = outputs[2].GetTensorTypeAndShapeInfo().GetShape();
@@ -1199,34 +1179,38 @@ namespace SELMSLAM {
         matches_info.mscore1 = mscore1_host.data();
         matches_info.mscore2 = mscore2_host.data();
 
+        // for(size_t i = 0; i < match1_host.size(); ++i) {
+        //     std::cout << "m1: " << matches_info.match1[i] << " - " << match1_host[i] << endl;
+        // }
+
+        /**
+         * Since I encountered issues accessing match1, match2, mscore1, and mscore2 values outside of this class, 
+         * I staticlly store their values in these four data structure
+        */
+
+       
+        matches_info.vmatch1.resize(match1_host.size());
+        for(size_t i = 0; i < match1_host.size(); ++i) {
+            // matches_info.vmatch1.push_back(static_cast<int>(match1_host[i])); WRONG WRONG WRONG
+            matches_info.vmatch1[i] = static_cast<int>(match1_host[i]);
+        }
+        matches_info.vmatch2.resize(match2_host.size());
+        for(size_t i = 0; i < match2_host.size(); ++i) {
+            matches_info.vmatch2[i]  = static_cast<int>(match2_host[i]);
+        }
+        matches_info.vmscore1.resize(mscore1_host.size());
+        for(size_t i = 0; i < mscore1_host.size(); ++i) {
+            matches_info.vmscore1[i] = mscore1_host[i];
+        }
+        matches_info.vmscore2.resize(mscore2_host.size());
+        for(size_t i = 0; i < mscore2_host.size(); ++i) {
+            matches_info.vmscore2[i] = mscore2_host[i];
+        }
+
         cout << endl << "B.B BLightGlue::perform_match. data is copied to matches_info object ..." << endl;
-
-        // end end end
-        
-        // 
-        // Process output tensors
-        // 
-        // std::vector<int64_t> match1shape = outputs[0].GetTensorTypeAndShapeInfo().GetShape();
-        // int64_t* match1 = (int64_t*)outputs[0].GetTensorMutableData<void>();
-        // int match1counts = match1shape[1]; 
-
-        // std::vector<int64_t> mscoreshape1 = outputs[2].GetTensorTypeAndShapeInfo().GetShape();
-	    // float* mscore1 = (float*)outputs[2].GetTensorMutableData<void>();
-        // int mscore1count = mscoreshape1[1];
-
-        // std::vector<int64_t> match2shape = outputs[1].GetTensorTypeAndShapeInfo().GetShape();
-        // int64_t* match2 = (int64_t*)outputs[1].GetTensorMutableData<void>();
-        // int match2counts = match2shape[1];
-
-        // std::vector<int64_t> mscoreshape2 = outputs[3].GetTensorTypeAndShapeInfo().GetShape();
-        // float* mscore2 = (float*)outputs[3].GetTensorMutableData<void>();
-        // int mscore2count = mscoreshape2[1];
 
         matches_info.src_img_idx = features1.img_idx;
 	    matches_info.dst_img_idx = features2.img_idx;
-
-        // matches_info.match1 = match1; 
-        // matches_info.match2 = match2;
 
         matches_info.match1shape = match1shape;
         matches_info.match2shape = match2shape;
@@ -1240,17 +1224,10 @@ namespace SELMSLAM {
         matches_info.mscore1count = mscore1count;
         matches_info.mscore2count = mscore2count;
 
-        cout << endl << "B.B BLightGlue::perform_match. matches_info initialization is finished." << endl;
+        // cout << endl << "B.B BLightGlue::perform_match. matches_info initialization is finished. matches_info.matches.size(): " << matches_info.matches.size();
+        // cin.get();
+        
 
-        // matches_info.mscore1 = mscore1;
-        // matches_info.mscore2 = mscore2;
-
-        // 
-        // !!! ACHTUNG ACHTUNG !!!
-        // 
-        // ReleaseCUDAProviderOptions(cuda_options);
-        // Don't forget to free the allocated host memory when you are done with it
-        // delete[] match1_host;
     }
 
     // void BBLightGlue::perform_match (SELMSLAM::ImageFeatures features1, SELMSLAM::ImageFeatures features2, SELMSLAM::MatchesInfo &matches_info) {

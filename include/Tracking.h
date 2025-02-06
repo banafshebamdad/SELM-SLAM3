@@ -271,6 +271,7 @@ protected:
 
     // Banafshe Bamdad
     SELMSLAM::BBSPExtractor* mpBBSPExtractorLeft, *mpBBSPExtractorRight;
+    SELMSLAM::BBSPExtractor* mpIniBBSPExtractor;
 
     //BoW
     ORBVocabulary* mpORBVocabulary;
@@ -379,7 +380,7 @@ protected:
 
 public:
     cv::Mat mImRight;
-     bool mbVelocity{false}; // B.B the scope changed from protected to public in order to print its value in System.TrackRGBD method
+    bool mbVelocity{false}; // B.B the scope changed from protected to public in order to print its value in System.TrackRGBD method
 };
 
 } //namespace ORB_SLAM
