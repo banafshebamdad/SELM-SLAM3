@@ -3,6 +3,10 @@ Vocabulary/
 git-orig/
 Thirdparty/
 *.mp4
+my_doc/
+my_evaluation/
+my_log/
+delme.sh
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
